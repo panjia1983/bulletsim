@@ -1,5 +1,5 @@
 #include "bulletsim_lite.h"
-#include "logging.h"
+#include "utils/logging.h"
 
 #include "rope.h"
 
@@ -699,6 +699,20 @@ std::vector<btVector3> CapsuleRope::GetControlPoints() {
 vector<btMatrix3x3> CapsuleRope::GetRotations() {
   return CapsuleRope_getRotations(m_children_rigidbodies);
 }
+
+vector<btVector3> CapsuleRope::GetLinearVelocities() {
+  return CapsuleRope_getLinearVelocities(m_children_rigidbodies);
+}
+
+vector<float> CapsuleRope::GetMasses() {
+  return CapsuleRope_getMasses(m_children_rigidbodies);
+}
+
+void CapsuleRope::ApplyCentralImpulses(const vector<btVector3>& impulses)
+{
+  CapsuleRope_applyCentralImpulses(m_children_rigidbodies, impulses);
+}
+
 void CapsuleRope::SetRotations(py::object rots) {
   vector<btMatrix3x3> m;
   fromNdarray3ToBtMats(numpy.attr("asarray")(rots), m);

@@ -1,7 +1,7 @@
 #include <boost/python.hpp>
 #include <boost/python/suite/indexing/vector_indexing_suite.hpp>
 #include "bulletsim_lite.h"
-#include "logging.h"
+#include "utils/logging.h"
 
 namespace py = boost::python;
 

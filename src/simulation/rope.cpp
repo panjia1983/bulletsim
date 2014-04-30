@@ -67,6 +67,28 @@ vector<btVector3> CapsuleRope_getNodes(const vector<btRigidBody*> &capsules) {
   return out;
 }
 
+vector<btVector3> CapsuleRope_getLinearVelocities(const vector<btRigidBody*> &capsules)
+{
+  vector<btVector3> out(capsules.size());
+  for (int i = 0; i < capsules.size(); i++)
+    out[i] = capsules[i]->getLinearVelocity();
+  return out;
+}
+
+vector<float> CapsuleRope_getMasses(const vector<btRigidBody*> &capsules)
+{
+  vector<float> masses(capsules.size());
+  for (int i = 0; i < capsules.size(); ++i)
+    masses[i] = 1 / capsules[i]->getInvMass();
+  return masses;
+}
+
+void CapsuleRope_applyCentralImpulses(const vector<btRigidBody*> &capsules, const vector<btVector3> & impulses)
+{
+  for (int i = 0; i < capsules.size(); ++i)
+    capsules[i]->applyCentralImpulse(impulses[i]);
+}
+
 vector<btVector3> CapsuleRope_getControlPoints(const vector<btRigidBody*> &capsules) { 
   vector<btVector3> out;
   out.reserve(capsules.size()+1);

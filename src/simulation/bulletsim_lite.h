@@ -156,7 +156,10 @@ public:
 
   std::vector<btVector3> GetNodes();
   std::vector<btVector3> GetControlPoints();
-  vector<btMatrix3x3> GetRotations();
+  std::vector<btMatrix3x3> GetRotations();
+  std::vector<btVector3> GetLinearVelocities();
+  std::vector<float> GetMasses();
+  void ApplyCentralImpulses(const vector<btVector3>& impulses);
   void SetRotations(py::object rots);
   vector<btVector3> GetTranslations();
   void SetTranslations(py::object trans);
@@ -176,6 +179,8 @@ public:
   virtual void SetLinearVelocity(const btVector3&);
   virtual void SetAngularVelocity(const btVector3&);
   // end not supported
+
+  
 
 private:
   vector<RaveLinkObject::Ptr> m_children;

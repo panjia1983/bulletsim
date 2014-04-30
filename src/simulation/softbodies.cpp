@@ -15,7 +15,6 @@
 #include <osgUtil/SmoothingVisitor>
 #include <osgUtil/IntersectionVisitor>
 #include <osgUtil/LineSegmentIntersector>
-#include "clouds/utils_pcl.h"
 #include <opencv2/imgproc/imgproc.hpp>
 #include <boost/foreach.hpp>
 #include "softBodyHelpers.h"

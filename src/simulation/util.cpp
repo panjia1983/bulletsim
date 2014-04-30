@@ -1,6 +1,6 @@
 #include "util.h"
 #include <boost/foreach.hpp>
-#include "conversions.h"
+#include "utils/conversions.h"
 
 using namespace Eigen;
 

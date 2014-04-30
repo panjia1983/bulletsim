@@ -5,6 +5,7 @@
 #include "basicobjects.h"
 #include "utils/config.h"
 
+
 class BulletSoftObject : public EnvironmentObject {
 private:
 public:

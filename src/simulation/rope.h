@@ -15,6 +15,10 @@ void CapsuleRope_setRotations(const vector<btRigidBody*> &capsules, const vector
 vector<btVector3> CapsuleRope_getTranslations(const vector<btRigidBody*> &capsules);
 void CapsuleRope_setTranslations(const vector<btRigidBody*> &capsules, const vector<btVector3>& trans);
 vector<float> CapsuleRope_getHalfHeights(const vector<btRigidBody*> &capsules);
+vector<btVector3> CapsuleRope_getLinearVelocities(const vector<btRigidBody*> &capsules);
+void CapsuleRope_applyCentralImpulses(const vector<btRigidBody*> &capsules, const vector<btVector3> & impulses);
+vector<float> CapsuleRope_getMasses(const vector<btRigidBody*> &capsules);
+
 
 class CapsuleRope : public CompoundObject<BulletObject> {
 private:
