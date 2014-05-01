@@ -39,5 +39,5 @@ ColorPoint getCorrespondingPoint(ColorCloudPtr cloud, cv::Point2i pixel);
 ColorCloudPtr skinFilter(ColorCloudPtr cloud_dense);
 ColorCloudPtr filterNeighbors(ColorCloudPtr cloud_in, ColorCloudPtr cloud_neighbor, float radius_search, int color_squared_dist, bool negative=false);
 pcl::PointIndices::Ptr neighborIndices(ColorCloudPtr cloud_in, ColorCloudPtr cloud_neighbor, float radius_search, int color_squared_dist);
-ColorCloudPtr extractBorder(ColorCloudPtr cloud_in, ColorCloudPtr cloud_veil = new ColorCloudPtr(), ColorCloudPtr cloud_shadow = new ColorCloudPtr());
+ColorCloudPtr extractBorder(ColorCloudPtr cloud_in, ColorCloudPtr cloud_veil, ColorCloudPtr cloud_shadow);
 ColorCloudPtr projectPointsOntoPlane(ColorCloudPtr in, std::vector<float> abcd);

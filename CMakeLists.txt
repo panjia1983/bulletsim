@@ -1,5 +1,8 @@
 cmake_minimum_required(VERSION 2.6)
 project(bulletsim)
+
+set(Boost_USE_STATIC_LIBS off)
+
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/CMakeModules")
 set(BULLETSIM_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 
@@ -9,7 +12,7 @@ endif (NOT CMAKE_BUILD_TYPE)
 message("if cmake can't find anything, you need to put /opt/ros/fuerte/share:/opt/ros/fuerte/stacks on your ROS_PACKAGE_PATH")
 
 # external libraries
-find_package(Boost COMPONENTS system filesystem program_options REQUIRED)
+find_package(Boost COMPONENTS system python filesystem program_options REQUIRED)
 
 find_package(Eigen3 REQUIRED)
 find_package(OpenRAVE REQUIRED)
@@ -20,8 +23,9 @@ find_package(osgGA REQUIRED)
 find_package(osgText REQUIRED)
 find_package(osgUtil REQUIRED)
 find_package(osgViewer REQUIRED)
-set(OSG_LIBS ${OPENTHREADS_LIBRARY} ${OSG_LIBRARY} ${OSGDB_LIBRARY} ${OSGGA_LIBRARY} ${OSGTEXT_LIBRARY} ${OSGUTIL_LIBRARY} ${OSGVIEWER_LIBRARY})
-set(OSG_INCLUDE_DIRS ${OPENTHREADS_LIBRARY_INCLUDE_DIR} ${OSG_LIBRARY_INCLUDE_DIR} ${OSGDB_LIBRARY_INCLUDE_DIR} ${OSGGA_LIBRARY_INCLUDE_DIR} ${OSGTEXT_LIBRARY_INCLUDE_DIR} ${OSGUTIL_LIBRARY_INCLUDE_DIR} ${OSGVIEWER_LIBRARY_INCLUDE_DIR})
+find_package(osgSim REQUIRED)
+set(OSG_LIBS ${OPENTHREADS_LIBRARY} ${OSG_LIBRARY} ${OSGSIM_LIBRARY} ${OSGDB_LIBRARY} ${OSGGA_LIBRARY} ${OSGTEXT_LIBRARY} ${OSGUTIL_LIBRARY} ${OSGVIEWER_LIBRARY})
+set(OSG_INCLUDE_DIRS ${OPENTHREADS_LIBRARY_INCLUDE_DIR} ${OSG_LIBRARY_INCLUDE_DIR} ${OSGSIM_LIBRARY_INCLUDE_DIR} ${OSGDB_LIBRARY_INCLUDE_DIR} ${OSGGA_LIBRARY_INCLUDE_DIR} ${OSGTEXT_LIBRARY_INCLUDE_DIR} ${OSGUTIL_LIBRARY_INCLUDE_DIR} ${OSGVIEWER_LIBRARY_INCLUDE_DIR})
 
 find_package(OpenCV REQUIRED)
 find_package(PCL REQUIRED)
@@ -41,8 +45,8 @@ add_definitions(${PCL_DEFINITIONS})
 add_definitions("-DEIGEN_DEFAULT_TO_ROW_MAJOR")
 add_definitions("-DBT_NO_PROFILE")
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fopenmp")
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fopenmp")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fopenmp -Wno-enum-compare -fPIC")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fopenmp -fPIC")
 
 # directories for libraries packaged in this tree
 set(BULLET_DIR ${BULLETSIM_SOURCE_DIR}/lib/bullet-2.79)
@@ -72,7 +76,7 @@ set(GUROBI_LIBRARY_DIR "$ENV{GUROBI_HOME}/lib")
 option(BUILD_TESTS "Build test/demo programs" off)
 option(BUILD_TRACKING "Build tracking code" on)
 
-set(BUILD_SHARED_LIBS off)
+set(BUILD_SHARED_LIBS on)
 
 add_subdirectory(lib)
 add_subdirectory(src)

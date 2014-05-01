@@ -29,6 +29,7 @@ if (BUILD_TESTS)
 endif (BUILD_TESTS)
 
 if (BUILD_TRACKING)
+  include(../cmake/main.cmake)
   add_subdirectory(tracking)
 	add_subdirectory(phasespace)
 endif (BUILD_TRACKING)

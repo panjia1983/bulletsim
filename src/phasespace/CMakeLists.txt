@@ -10,7 +10,8 @@ include_directories(
 
 link_directories(
   ${ROS_ROOT_DIR}/stacks/geometry/tf/lib
-	${ROS_ROOT_DIR}/stacks/vision_opencv/cv_bridge/lib
+  ${ROS_ROOT_DIR}/stacks/vision_opencv/cv_bridge/lib
+  ${ROS_ROOT_DIR}/lib
 )
 
 add_library(phasespace 
@@ -20,28 +21,28 @@ add_library(phasespace
 )
 
 target_link_libraries(phasespace
-	clouds simulation tracking utils ${PHASESPACE_LIBS} ${ROS_LIBRARIES})
+	clouds simulation tracking utils ${PHASESPACE_LIBS} ${ROS_LIBRARIES} roslib roscpp message_filters rosconsole rostime roscpp_serialization)
 	
 add_executable(phasespace_publisher phasespace_publisher.cpp)
-target_link_libraries(phasespace_publisher phasespace)
+target_link_libraries(phasespace_publisher phasespace tf)
 
 add_executable(phasespace_simple_publisher phasespace_simple_publisher.cpp)
-target_link_libraries(phasespace_simple_publisher phasespace)
+target_link_libraries(phasespace_simple_publisher phasespace tf)
 
 add_executable(phasespace_subscriber phasespace_subscriber.cpp)
-target_link_libraries(phasespace_subscriber phasespace)
+target_link_libraries(phasespace_subscriber phasespace tf)
 
 add_executable(phasespace_cloud_viz phasespace_cloud_viz.cpp)
 target_link_libraries(phasespace_cloud_viz phasespace tf clouds tracking)
 
 add_executable(test_phasespace test_phasespace.cpp)
-target_link_libraries(test_phasespace phasespace)
+target_link_libraries(test_phasespace phasespace tf)
 
 add_executable(test_phasespace_rigid test_phasespace_rigid.cpp)
-target_link_libraries(test_phasespace_rigid phasespace)
+target_link_libraries(test_phasespace_rigid phasespace tf)
 
 add_executable(phasespace_kinect_calibration phasespace_kinect_calibration.cpp)
-target_link_libraries(phasespace_kinect_calibration phasespace ${PCL_LIBRARIES} ${OpenCV_LIBS} )
+target_link_libraries(phasespace_kinect_calibration phasespace ${PCL_LIBRARIES} ${OpenCV_LIBS} tf )
 
 add_executable(phasespace_transforms_node phasespace_transforms_node.cpp)
 target_link_libraries(phasespace_transforms_node phasespace clouds utils ${PCL_LIBRARIES} ${OpenCV_LIBS} ${ROS_LIBRARIES} boost_signals tf)

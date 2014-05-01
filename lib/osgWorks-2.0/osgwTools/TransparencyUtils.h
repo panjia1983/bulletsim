@@ -55,6 +55,15 @@ public:
     virtual void apply( osg::Geode& geode );
 };
 
+/** \brief Returns True if the given StateSet is configured like one of our transparent StateSets.
+\It returns True if the Node has a StateSet, and the StateSet has the following signature:
+\li A BlendColor StateAttribute
+\li A BlendFunc StateAttribute
+\li GL_BLEND is enabled
+\li Rendering hint set to TRANSPARENT_BIN
+*/
+OSGWTOOLS_EXPORT bool isTransparent( const osg::StateSet* stateSet );
+
 
 
 /** When enabling transparency on a Node or Drawable that has no StateSet,
@@ -169,15 +178,6 @@ bool transparentDisable( T* nodeOrDrawable, bool recursive=false )
 
     return( true );
 }
-
-/** \brief Returns True if the given StateSet is configured like one of our transparent StateSets.
-\It returns True if the Node has a StateSet, and the StateSet has the following signature:
-\li A BlendColor StateAttribute
-\li A BlendFunc StateAttribute
-\li GL_BLEND is enabled
-\li Rendering hint set to TRANSPARENT_BIN
-*/
-OSGWTOOLS_EXPORT bool isTransparent( const osg::StateSet* stateSet );
 
 
 
