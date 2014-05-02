@@ -7,6 +7,6 @@
 #include "clouds/utils_pcl.h"
 #include "utils_tracking.h"
 
-TrackedObject::Ptr toTrackedObject(const bulletsim_msgs::ObjectInit& obj);
 bulletsim_msgs::TrackedObject toTrackedObjectMessage(TrackedObject::Ptr obj);
 TrackedObject::Ptr callInitServiceAndCreateObject(ColorCloudPtr cloud, cv::Mat image, cv::Mat mask, CoordinateTransformer* transformer);
+TrackedObject::Ptr callInitServiceAndCreateObject(const vector<btVector3>& nodes, float rope_radius, ColorCloudPtr cloud, cv::Mat image, cv::Mat mask, CoordinateTransformer* transformer);

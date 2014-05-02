@@ -81,7 +81,8 @@ namespace bs
 
 
 
-  std::vector<std::vector<btVector3> > tracking(const btTransform& cam, const std::vector<ColorCloudPtr>& filtered_clouds, std::vector<cv::Mat>& rgb_images, std::vector<cv::Mat>& depth_images, int num_iter)
+
+  std::vector<std::vector<btVector3> > tracking(const std::vector<btVector3>& nodes, float rope_radius, const btTransform& cam, const std::vector<ColorCloudPtr>& filtered_clouds, std::vector<cv::Mat>& rgb_images, std::vector<cv::Mat>& depth_images, int num_iter)
   {
     CoordinateTransformer transformer(cam);
     std::vector<std::vector<btVector3> > tracking_results;
@@ -95,7 +96,7 @@ namespace bs
     Scene scene;
     util::setGlobalEnv(scene.env);
 
-    TrackedObject::Ptr trackedObj = callInitServiceAndCreateObject(filtered_clouds[0], rgb_images[0], mask_image, &transformer);
+    TrackedObject::Ptr trackedObj = callInitServiceAndCreateObject(nodes, rope_radius, filtered_clouds[0], rgb_images[0], mask_image, &transformer);
     if (!trackedObj) throw runtime_error("initialization of object failed.");
     trackedObj->init();
     scene.env->add(trackedObj->m_sim);
@@ -111,7 +112,7 @@ namespace bs
 
     bool applyEvidence = true;
 
-    for (int n = 1; n < rgb_images.size(); ++n) {
+    for (int n = 0; n < rgb_images.size(); ++n) {
       cloudFeatures->updateInputs(filtered_clouds[n], rgb_images[n], &transformer);
       visInterface->visibilities[0]->updateInput(depth_images[n]);
 
@@ -121,13 +122,13 @@ namespace bs
         alg->maximizationStep(applyEvidence);
         scene.step(.03, 2, .015);   
       }
-
-      MatrixXf& estPts = alg->m_estPts;
-      MatrixXf& obsPts = alg->m_obsPts;
-      MatrixXf& pZgivenC = alg->m_pZgivenC;
-      MatrixXf nodes = calculateNodesNaive(estPts, obsPts, pZgivenC);
-    
-      tracking_results.push_back(toBulletVectors(nodes));
+      
+      std::vector<btVector3> nodes = scaleVecs(trackedObj->getPoints(), 1/METERS);
+      for (int i = 0; i < nodes.size(); ++i) {
+        cout << nodes[i].x() << " " << nodes[i].y() << " " << nodes[i].z() << endl;
+      }
+      
+      tracking_results.push_back(nodes);
     }
 
     return tracking_results;
@@ -317,6 +318,22 @@ namespace bs
     return color_clouds;
   }
 
+
+  std::vector<ColorCloud> fromNdarray2ListToColorClouds(py::list a)
+  {
+    std::vector<ColorCloud> color_clouds;
+
+    int n = py::len(a);
+    for (int i = 0; i < n; ++i) {
+      py::object input = py::extract<py::object>(a[i]);
+      ColorCloud output = fromNdarray2ToColorCloud(input);
+      color_clouds.push_back(output);
+    }
+
+    return color_clouds;
+  }
+
+
   py::object toNdarray2(const vector<btVector3> &vs) {
     py::object out = numpy.attr("empty")(py::make_tuple(vs.size(), 3), type_traits<btScalar>::npname);
     btScalar* pout = getPointer<btScalar>(out);
@@ -343,6 +360,30 @@ namespace bs
     return out;
   }
 
+  vector<btVector3> fromNdarray2ToNodes(py::object a)
+  {
+    a = ensureFormat<btScalar>(a);
+    py::object shape = a.attr("shape");
+    if (py::len(shape) != 2) {
+      throw std::runtime_error((boost::format("expected 2-d array, got %d-d instead") % py::len(shape)).str());
+    }
+    
+    size_t out_dim0 = py::extract<size_t>(shape[0]); // number of points
+    size_t out_dim1 = py::extract<size_t>(shape[1]); // dimension
+
+    btScalar* pin = getPointer<btScalar>(a);
+    
+    vector<btVector3> nodes;
+    for (int i = 0; i < out_dim0; ++i) {
+      btScalar* cur = pin + out_dim1 * i;
+      btVector3 v(*cur, *(cur+1), *(cur+2));
+      nodes.push_back(v);
+    }
+    
+    return nodes;
+  }
+
+
   btTransform toBtTransform(py::object py_hmat, btScalar scale=1) {
     vector<btScalar> hmat; size_t dim0, dim1;
     fromNdarray2(py_hmat.attr("T"), hmat, dim0, dim1);
@@ -356,25 +397,60 @@ namespace bs
   }
 
 
-  py::object py_tracking(py::object transformer, py::object filtered_clouds, py::object rgb_images, py::object depth_images, int num_iter)
+  py::object py_tracking(py::object nodes, float rope_radius, py::object transformer, py::object filtered_clouds, py::object rgb_images, py::object depth_images, int num_iter)
   {
     btTransform transformer_ = toBtTransform(transformer);
     std::vector<cv::Mat> rgb_images_;
     std::vector<cv::Mat> depth_images_;
     std::vector<ColorCloudPtr> filtered_clouds_;
+    std::vector<btVector3> nodes_;
 
     rgb_images_ = fromNdarray4ToRGBImages(rgb_images);
     depth_images_ = fromNdarray3ToDepthImages(depth_images);
     std::vector<ColorCloud> filtered_clouds__ = fromNdarray3ToColorClouds(filtered_clouds);
+    nodes_ = fromNdarray2ToNodes(nodes);
 
     for (int i = 0; i < filtered_clouds__.size(); ++i) {
       ColorCloudPtr filtered_cloud(new ColorCloud(filtered_clouds__[i]));
       filtered_clouds_.push_back(filtered_cloud);
     }
   
-    std::vector<std::vector<btVector3> > tracking_results = tracking(transformer_, filtered_clouds_, rgb_images_, depth_images_, num_iter);
+    std::vector<std::vector<btVector3> > tracking_results = tracking(nodes_, rope_radius, transformer_, filtered_clouds_, rgb_images_, depth_images_, num_iter);
 
     return toNdarray3(tracking_results);
   }
+
+
+  py::object py_tracking2(py::object nodes, float rope_radius, py::object transformer, py::list filtered_clouds, py::object rgb_images, py::object depth_images, int num_iter)
+  {
+    int dummy_argc=0;
+    ros::init((int&)dummy_argc, NULL, "tracking");  
+    ros::NodeHandle n;
+
+    btTransform transformer_ = toBtTransform(transformer);
+    std::vector<cv::Mat> rgb_images_;
+    std::vector<cv::Mat> depth_images_;
+    std::vector<ColorCloudPtr> filtered_clouds_;
+    std::vector<btVector3> nodes_;
+
+    rgb_images_ = fromNdarray4ToRGBImages(rgb_images);
+    depth_images_ = fromNdarray3ToDepthImages(depth_images);
+    std::vector<ColorCloud> filtered_clouds__ = fromNdarray2ListToColorClouds(filtered_clouds);
+    nodes_ = fromNdarray2ToNodes(nodes);
+    
+    
+    for (int i = 0; i < filtered_clouds__.size(); ++i) {
+      ColorCloudPtr filtered_cloud(new ColorCloud(filtered_clouds__[i]));
+      filtered_clouds_.push_back(filtered_cloud);
+    }
+
+  
+    std::vector<std::vector<btVector3> > tracking_results = tracking(nodes_, rope_radius, transformer_, filtered_clouds_, rgb_images_, depth_images_, num_iter);
+   
+    py::object results = toNdarray3(tracking_results);
+
+    return results;
+  }
+
 
 }

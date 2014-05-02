@@ -38,7 +38,7 @@ using namespace std;
 using namespace Eigen;
 
 namespace cv {
-	typedef Vec<uchar, 3> Vec3b;
+  typedef Vec<uchar, 3> Vec3b;
 }
 
 int nCameras;
@@ -60,16 +60,16 @@ void callback(const vector<sensor_msgs::PointCloud2ConstPtr>& cloud_msg, const v
 
   assert(image_msgs.size() == 2*nCameras);
   for (int i=0; i<nCameras; i++) {
-  	// merge all the clouds progressively
-  	ColorCloudPtr cloud(new ColorCloud);
-		pcl::fromROSMsg(*cloud_msg[i], *cloud);
-		pcl::transformPointCloud(*cloud, *cloud, transformers[i]->worldFromCamEigen);
+    // merge all the clouds progressively
+    ColorCloudPtr cloud(new ColorCloud);
+    pcl::fromROSMsg(*cloud_msg[i], *cloud);
+    pcl::transformPointCloud(*cloud, *cloud, transformers[i]->worldFromCamEigen);
 
-		if (i==0) *filteredCloud = *cloud;
-  	else *filteredCloud = *filteredCloud + *cloud;
+    if (i==0) *filteredCloud = *cloud;
+    else *filteredCloud = *filteredCloud + *cloud;
 
-		extractImageAndMask(cv_bridge::toCvCopy(image_msgs[2*i])->image, rgb_images[i], mask_images[i]);
-  	depth_images[i] = cv_bridge::toCvCopy(image_msgs[2*i+1])->image;
+    extractImageAndMask(cv_bridge::toCvCopy(image_msgs[2*i])->image, rgb_images[i], mask_images[i]);
+    depth_images[i] = cv_bridge::toCvCopy(image_msgs[2*i+1])->image;
   }
   filteredCloud = downsampleCloud(filteredCloud, TrackingConfig::downsample*METERS);
   //filteredCloud = filterZ(filteredCloud, -0.1*METERS, 0.20*METERS);
@@ -100,16 +100,16 @@ int main(int argc, char* argv[]) {
   listener = new tf::TransformListener();
 
   for (int i=0; i<nCameras; i++)
-  	transformers.push_back(new CoordinateTransformer(waitForAndGetTransform(*listener, "/ground", TrackingConfig::cameraTopics[i]+"_rgb_optical_frame")));
+    transformers.push_back(new CoordinateTransformer(waitForAndGetTransform(*listener, "/ground", TrackingConfig::cameraTopics[i]+"_rgb_optical_frame")));
 
-	vector<string> cloud_topics;
-	vector<string> image_topics;
+  vector<string> cloud_topics;
+  vector<string> image_topics;
   for (int i=0; i<nCameras; i++) {
-		cloud_topics.push_back("/preprocessor" + TrackingConfig::cameraTopics[i] + "/points");
-		image_topics.push_back("/preprocessor" + TrackingConfig::cameraTopics[i] + "/image");
-		image_topics.push_back("/preprocessor" + TrackingConfig::cameraTopics[i] + "/depth");
+    cloud_topics.push_back("/preprocessor" + TrackingConfig::cameraTopics[i] + "/points");
+    image_topics.push_back("/preprocessor" + TrackingConfig::cameraTopics[i] + "/image");
+    image_topics.push_back("/preprocessor" + TrackingConfig::cameraTopics[i] + "/depth");
   }
-	synchronizeAndRegisterCallback(cloud_topics, image_topics, nh, callback);
+  synchronizeAndRegisterCallback(cloud_topics, image_topics, nh, callback);
 
   ros::Publisher objPub = nh.advertise<bulletsim_msgs::TrackedObject>(trackedObjectTopic,10);
 
@@ -140,26 +140,26 @@ int main(int argc, char* argv[]) {
   ViewerConfig::cameraHomeUp = -transformers[0]->worldFromCamUnscaled.getBasis().getColumn(1);
   scene.startViewer();
 
-	TrackedObject::Ptr trackedObj = callInitServiceAndCreateObject(filteredCloud, rgb_images[0], mask_images[0], transformers[0]);
+  TrackedObject::Ptr trackedObj = callInitServiceAndCreateObject(filteredCloud, rgb_images[0], mask_images[0], transformers[0]);
   if (!trackedObj) throw runtime_error("initialization of object failed.");
   trackedObj->init();
   scene.env->add(trackedObj->m_sim);
 
- 	// actual tracking algorithm
-	MultiVisibility::Ptr visInterface(new MultiVisibility());
-	for (int i=0; i<nCameras; i++) {
-		if (trackedObj->m_type == "rope") // Don't do self-occlusion if the trackedObj is a rope
-			visInterface->addVisibility(DepthImageVisibility::Ptr(new DepthImageVisibility(transformers[i])));
-		else
-			visInterface->addVisibility(AllOcclusionsVisibility::Ptr(new AllOcclusionsVisibility(scene.env->bullet->dynamicsWorld, transformers[i])));
-	}
+  // actual tracking algorithm
+  MultiVisibility::Ptr visInterface(new MultiVisibility());
+  for (int i=0; i<nCameras; i++) {
+    if (trackedObj->m_type == "rope") // Don't do self-occlusion if the trackedObj is a rope
+      visInterface->addVisibility(DepthImageVisibility::Ptr(new DepthImageVisibility(transformers[i])));
+    else
+      visInterface->addVisibility(AllOcclusionsVisibility::Ptr(new AllOcclusionsVisibility(scene.env->bullet->dynamicsWorld, transformers[i])));
+  }
 
-	TrackedObjectFeatureExtractor::Ptr objectFeatures(new TrackedObjectFeatureExtractor(trackedObj));
-	CloudFeatureExtractor::Ptr cloudFeatures(new CloudFeatureExtractor());
-	PhysicsTracker::Ptr alg(new PhysicsTracker(objectFeatures, cloudFeatures, visInterface));
-	PhysicsTrackerVisualizer::Ptr trackingVisualizer(new PhysicsTrackerVisualizer(&scene, alg));
+  TrackedObjectFeatureExtractor::Ptr objectFeatures(new TrackedObjectFeatureExtractor(trackedObj));
+  CloudFeatureExtractor::Ptr cloudFeatures(new CloudFeatureExtractor());
+  PhysicsTracker::Ptr alg(new PhysicsTracker(objectFeatures, cloudFeatures, visInterface));
+  PhysicsTrackerVisualizer::Ptr trackingVisualizer(new PhysicsTrackerVisualizer(&scene, alg));
 
-	bool applyEvidence = true;
+  bool applyEvidence = true;
   scene.addVoidKeyCallback('a',boost::bind(toggle, &applyEvidence), "apply evidence");
   scene.addVoidKeyCallback('=',boost::bind(&EnvironmentObject::adjustTransparency, trackedObj->getSim(), 0.1f), "increase opacity");
   scene.addVoidKeyCallback('-',boost::bind(&EnvironmentObject::adjustTransparency, trackedObj->getSim(), -0.1f), "decrease opacity");
@@ -169,22 +169,22 @@ int main(int argc, char* argv[]) {
   boost::shared_ptr<ScreenThreadRecorder> screen_recorder;
   boost::shared_ptr<ImageTopicRecorder> image_topic_recorder;
   if (RecordingConfig::record == RECORD_RENDER_ONLY) {
-		screen_recorder.reset(new ScreenThreadRecorder(scene.viewer, RecordingConfig::dir + "/" +  RecordingConfig::video_file + "_tracked.avi"));
+    screen_recorder.reset(new ScreenThreadRecorder(scene.viewer, RecordingConfig::dir + "/" +  RecordingConfig::video_file + "_tracked.avi"));
   } else if (RecordingConfig::record == RECORD_RENDER_AND_TOPIC) {
-		screen_recorder.reset(new ScreenThreadRecorder(scene.viewer, RecordingConfig::dir + "/" +  RecordingConfig::video_file + "_tracked.avi"));
-		image_topic_recorder.reset(new ImageTopicRecorder(nh, image_topics[0], RecordingConfig::dir + "/" +  RecordingConfig::video_file + "_topic.avi"));
+    screen_recorder.reset(new ScreenThreadRecorder(scene.viewer, RecordingConfig::dir + "/" +  RecordingConfig::video_file + "_tracked.avi"));
+    image_topic_recorder.reset(new ImageTopicRecorder(nh, image_topics[0], RecordingConfig::dir + "/" +  RecordingConfig::video_file + "_topic.avi"));
   }
 
   scene.setSyncTime(false);
   scene.setDrawing(true);
   while (!exit_loop && ros::ok()) {
-  	//Update the inputs of the featureExtractors and visibilities (if they have any inputs)
-  	cloudFeatures->updateInputs(filteredCloud, rgb_images[0], transformers[0]);
-  	for (int i=0; i<nCameras; i++)
-    	visInterface->visibilities[i]->updateInput(depth_images[i]);
+    //Update the inputs of the featureExtractors and visibilities (if they have any inputs)
+    cloudFeatures->updateInputs(filteredCloud, rgb_images[0], transformers[0]);
+    for (int i=0; i<nCameras; i++)
+      visInterface->visibilities[i]->updateInput(depth_images[i]);
     pending = false;
     while (ros::ok() && !pending) {
-    	//Do iteration
+      //Do iteration
       alg->updateFeatures();
       alg->expectationStep();
       alg->maximizationStep(applyEvidence);
@@ -195,5 +195,5 @@ int main(int argc, char* argv[]) {
       ros::spinOnce();
     }
     objPub.publish(toTrackedObjectMessage(trackedObj));
- 	}
+  }
 }

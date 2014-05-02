@@ -27,71 +27,85 @@ using namespace Eigen;
 
 using namespace std;
 
+TrackedObject::Ptr toTrackedObject(const vector<btVector3>& nodes_, float rope_radius, ColorCloudPtr cloud, cv::Mat image, cv::Mat mask, CoordinateTransformer* transformer)
+{
+  vector<btVector3> nodes(nodes_);
+  BOOST_FOREACH(btVector3& node, nodes) node += btVector3(0,0,.01);
+  CapsuleRope::Ptr sim(new CapsuleRope(scaleVecs(nodes,METERS), rope_radius*METERS));
+  TrackedRope::Ptr tracked_rope(new TrackedRope(sim));
+
+  if (!image.empty())
+    sim->setTexture(image, mask, toBulletTransform(transformer->camFromWorldEigen));
+
+  return tracked_rope;
+
+}
+
 TrackedObject::Ptr toTrackedObject(const bulletsim_msgs::ObjectInit& initMsg, ColorCloudPtr cloud, cv::Mat image, cv::Mat mask, CoordinateTransformer* transformer) {
   if (initMsg.type == "rope") {
-	  vector<btVector3> nodes = toBulletVectors(initMsg.rope.nodes);
-	  BOOST_FOREACH(btVector3& node, nodes) node += btVector3(0,0,.01);
+    vector<btVector3> nodes = toBulletVectors(initMsg.rope.nodes);
+    BOOST_FOREACH(btVector3& node, nodes) node += btVector3(0,0,.01);
 
-	  CapsuleRope::Ptr sim(new CapsuleRope(scaleVecs(nodes,METERS), initMsg.rope.radius*METERS));
-	  TrackedRope::Ptr tracked_rope(new TrackedRope(sim));
+    CapsuleRope::Ptr sim(new CapsuleRope(scaleVecs(nodes,METERS), initMsg.rope.radius*METERS));
+    TrackedRope::Ptr tracked_rope(new TrackedRope(sim));
 
-  	if (!image.empty())
-  	  sim->setTexture(image, mask, toBulletTransform(transformer->camFromWorldEigen));
+    if (!image.empty())
+      sim->setTexture(image, mask, toBulletTransform(transformer->camFromWorldEigen));
 
-	  return tracked_rope;
+    return tracked_rope;
   }
   else if (initMsg.type == "towel_corners") {
-	  const vector<geometry_msgs::Point32>& points = initMsg.towel_corners.polygon.points;
-	  vector<btVector3> corners = scaleVecs(toBulletVectors(points),METERS);
+    const vector<geometry_msgs::Point32>& points = initMsg.towel_corners.polygon.points;
+    vector<btVector3> corners = scaleVecs(toBulletVectors(points),METERS);
 
-	  float sx = (corners[0] - corners[1]).length();
-		float sy = (corners[0] - corners[3]).length();
-		int resolution_x = sx/(TrackingConfig::node_distance*METERS) + 1;
-		int resolution_y = sy/(TrackingConfig::node_distance*METERS) + 1;
-		float mass = (TrackingConfig::surface_density/(METERS*METERS)) * (sx * sy);
+    float sx = (corners[0] - corners[1]).length();
+    float sy = (corners[0] - corners[3]).length();
+    int resolution_x = sx/(TrackingConfig::node_distance*METERS) + 1;
+    int resolution_y = sy/(TrackingConfig::node_distance*METERS) + 1;
+    float mass = (TrackingConfig::surface_density/(METERS*METERS)) * (sx * sy);
 
-	  printf("Created towel with following properties:\n");
-	  printf("Surface density (Mass per area): %f\n", TrackingConfig::surface_density);
-	  printf("Mass: %f\n", mass);
-	  printf("Dimensions and area: %f x %f = %f\n", sx/METERS, sy/METERS, sx*sy/(METERS*METERS));
-	  printf("Node distance (distance between nodes): %f\n", TrackingConfig::node_distance);
-	  printf("Resolution: %d %d\n", resolution_x, resolution_y);
+    printf("Created towel with following properties:\n");
+    printf("Surface density (Mass per area): %f\n", TrackingConfig::surface_density);
+    printf("Mass: %f\n", mass);
+    printf("Dimensions and area: %f x %f = %f\n", sx/METERS, sy/METERS, sx*sy/(METERS*METERS));
+    printf("Node distance (distance between nodes): %f\n", TrackingConfig::node_distance);
+    printf("Resolution: %d %d\n", resolution_x, resolution_y);
 
-	  vector<btVector3> poly_corners = polyCorners(cloud);
-	  //BOOST_FOREACH(btVector3& poly_corner, poly_corners) util::drawSpheres(poly_corner, Vector3f(1,0,0), 0.5, 2, env);
-  	BulletSoftObject::Ptr sim = makeCloth(poly_corners, resolution_x, resolution_y, mass);
-  	if (!image.empty())
-  	  sim->setTexture(image, toBulletTransform(transformer->camFromWorldEigen));
+    vector<btVector3> poly_corners = polyCorners(cloud);
+    //BOOST_FOREACH(btVector3& poly_corner, poly_corners) util::drawSpheres(poly_corner, Vector3f(1,0,0), 0.5, 2, env);
+    BulletSoftObject::Ptr sim = makeCloth(poly_corners, resolution_x, resolution_y, mass);
+    if (!image.empty())
+      sim->setTexture(image, toBulletTransform(transformer->camFromWorldEigen));
 
-	  //Shift the whole cloth upwards in case some of it starts below the table surface
-	  sim->softBody->translate(btVector3(0,0,0.01*METERS));
+    //Shift the whole cloth upwards in case some of it starts below the table surface
+    sim->softBody->translate(btVector3(0,0,0.01*METERS));
 
-	  //for (int i=0; i<sim->softBody->m_nodes.size(); i++) {
-//		for (int i=0; i<10; i++) {
-//			util::drawSpheres(sim->softBody->m_nodes[i].m_x, Vector3f(1,0,0), 0.5, 2, env);
-//	  	cv::Point2f pixel = sim->getTexCoord(i);
-//	  	image.at<cv::Vec3b>(pixel.y, pixel.x) = cv::Vec3b(255,255,255);
-//	  }
-//	  cv::imwrite("/home/alex/Desktop/tshirt_tex2.jpg", image);
+    //for (int i=0; i<sim->softBody->m_nodes.size(); i++) {
+    //		for (int i=0; i<10; i++) {
+    //			util::drawSpheres(sim->softBody->m_nodes[i].m_x, Vector3f(1,0,0), 0.5, 2, env);
+    //	  	cv::Point2f pixel = sim->getTexCoord(i);
+    //	  	image.at<cv::Vec3b>(pixel.y, pixel.x) = cv::Vec3b(255,255,255);
+    //	  }
+    //	  cv::imwrite("/home/alex/Desktop/tshirt_tex2.jpg", image);
 
-	  TrackedCloth::Ptr tracked_towel(new TrackedCloth(sim, resolution_x, resolution_y, sx, sy));
+    TrackedCloth::Ptr tracked_towel(new TrackedCloth(sim, resolution_x, resolution_y, sx, sy));
 
-	  return tracked_towel;
+    return tracked_towel;
   }
   else if (initMsg.type == "box") {
-		vector<btVector3> top_corners = polyCorners(cloud);
-		float thickness = top_corners[0].z();
-		BulletSoftObject::Ptr sim = makeSponge(top_corners, thickness, 3);
-		sim->setColor(1,1,1,1);
+    vector<btVector3> top_corners = polyCorners(cloud);
+    float thickness = top_corners[0].z();
+    BulletSoftObject::Ptr sim = makeSponge(top_corners, thickness, 3);
+    sim->setColor(1,1,1,1);
 
-	  //Shift the whole sponge upwards in case some of it starts below the table surface
-	  sim->softBody->translate(btVector3(0,0,0.01*METERS));
+    //Shift the whole sponge upwards in case some of it starts below the table surface
+    sim->softBody->translate(btVector3(0,0,0.01*METERS));
 
-		TrackedSponge::Ptr tracked_sponge(new TrackedSponge(sim));
-		return tracked_sponge;
+    TrackedSponge::Ptr tracked_sponge(new TrackedSponge(sim));
+    return tracked_sponge;
   }
   else
-	  throw runtime_error("unrecognized initialization type" + initMsg.type);
+    throw runtime_error("unrecognized initialization type" + initMsg.type);
 }
 
 bulletsim_msgs::TrackedObject toTrackedObjectMessage(TrackedObject::Ptr obj) {
@@ -104,43 +118,43 @@ bulletsim_msgs::TrackedObject toTrackedObjectMessage(TrackedObject::Ptr obj) {
     msg.rope.nodes = toROSPoints(scaleVecs(obj->getPoints(), 1/METERS));
   }
   else if (obj->m_type == "towel"){
-  	msg.type = obj->m_type;
+    msg.type = obj->m_type;
 
-  	BulletSoftObject::Ptr sim = boost::dynamic_pointer_cast<BulletSoftObject>(obj->m_sim);
-  	const btSoftBody::tNodeArray& nodes = sim->softBody->m_nodes;
-  	const btSoftBody::tFaceArray& faces = sim->softBody->m_faces;
+    BulletSoftObject::Ptr sim = boost::dynamic_pointer_cast<BulletSoftObject>(obj->m_sim);
+    const btSoftBody::tNodeArray& nodes = sim->softBody->m_nodes;
+    const btSoftBody::tFaceArray& faces = sim->softBody->m_faces;
 
-  	for (int i=0; i<nodes.size(); i++) {
-  		msg.mesh.vertices.push_back(toROSPoint(nodes[i].m_x/METERS));
-  		msg.mesh.normals.push_back(toROSPoint(nodes[i].m_n/METERS));
-  	}
+    for (int i=0; i<nodes.size(); i++) {
+      msg.mesh.vertices.push_back(toROSPoint(nodes[i].m_x/METERS));
+      msg.mesh.normals.push_back(toROSPoint(nodes[i].m_n/METERS));
+    }
 
-  	// compute face to nodes indices
-  	vector<vector<int> > face2nodes(faces.size(), vector<int>(3,-1));
-  	for (int i=0; i<nodes.size(); i++) {
-  		int j,c;
-  		for(j=0; j<faces.size(); j++) {
-  			for(c=0; c<3; c++) {
-  				if (&nodes[i] == faces[j].m_n[c]) {
-  					face2nodes[j][c] = i;
-  				}
-  			}
-  		}
-  	}
+    // compute face to nodes indices
+    vector<vector<int> > face2nodes(faces.size(), vector<int>(3,-1));
+    for (int i=0; i<nodes.size(); i++) {
+      int j,c;
+      for(j=0; j<faces.size(); j++) {
+        for(c=0; c<3; c++) {
+          if (&nodes[i] == faces[j].m_n[c]) {
+            face2nodes[j][c] = i;
+          }
+        }
+      }
+    }
 
-  	for (int j=0; j<faces.size(); j++) {
-  		bulletsim_msgs::Face face;
-  		for (int c=0; c<3; c++) {
-  			face.vertex_inds.push_back(face2nodes[j][c]);
-  			face.normal_inds.push_back(face2nodes[j][c]);
-  		}
-  		msg.mesh.faces.push_back(face);
-  	}
+    for (int j=0; j<faces.size(); j++) {
+      bulletsim_msgs::Face face;
+      for (int c=0; c<3; c++) {
+        face.vertex_inds.push_back(face2nodes[j][c]);
+        face.normal_inds.push_back(face2nodes[j][c]);
+      }
+      msg.mesh.faces.push_back(face);
+    }
 
   }
   else {
-	  //TODO
-	  //LOG_ERROR("I don't knot how to publish a ");
+    //TODO
+    //LOG_ERROR("I don't knot how to publish a ");
   }
   return msg;
 }
@@ -152,10 +166,16 @@ TrackedObject::Ptr callInitServiceAndCreateObject(ColorCloudPtr cloud, cv::Mat i
 	
   bool success = ros::service::call(initializationService, init);
   if (success)
-  	return toTrackedObject(init.response.objectInit, cloud, image, mask, transformer);
+    return toTrackedObject(init.response.objectInit, cloud, image, mask, transformer);
   else {
-		ROS_ERROR("initialization failed");
-		return TrackedObject::Ptr();
+    ROS_ERROR("initialization failed");
+    return TrackedObject::Ptr();
   }
 }
+
+
+TrackedObject::Ptr callInitServiceAndCreateObject(const vector<btVector3>& nodes, float rope_radius, ColorCloudPtr cloud, cv::Mat image, cv::Mat mask, CoordinateTransformer* transformer) {
+  return toTrackedObject(nodes, rope_radius, cloud, image, mask, transformer);
+}
+
 
