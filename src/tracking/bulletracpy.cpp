@@ -8,7 +8,7 @@ namespace py = boost::python;
 BOOST_PYTHON_MODULE(cbulletracpy) {
   LoggingInit();
   log4cplus::Logger::getRoot().setLogLevel(GeneralConfig::verbose);
+  bt::InitPython();
 
-  py::def("py_tracking", bs::py_tracking);
-
+  py::def("py_tracking", &bt::py_tracking);
 }

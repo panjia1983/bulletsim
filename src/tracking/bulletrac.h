@@ -21,25 +21,27 @@
 using namespace std;
 using namespace Eigen;
 
-namespace bs {
+namespace bt {
+  namespace py = boost::python;
+
   class BULLETSIM_API TrackedRope : public TrackedObject {
   public:
     typedef boost::shared_ptr<TrackedRope> Ptr;
     
-    TrackedRope(CapsuleRopePtr sim, const Vector3f& default_color);
+    TrackedRope(bs::CapsuleRopePtr sim, const Vector3f& default_color);
     
     std::vector<btVector3> getPoints();
     void applyEvidence(const Eigen::MatrixXf& corr, const Eigen::MatrixXf& obsPts);
     void initColors();
 
   protected:
-    CapsuleRopePtr m_sim;
+    bs::CapsuleRopePtr m_sim;
     Vector3f m_default_color;
   };
 
-  std::vector<btVector3> tracking(CapsuleRopePtr sim, BulletEnvironmentPtr env, const btTransform& cam, ColorCloudPtr cloud, cv::Mat rgb_image, cv::Mat depth_image, int num_iter);
+  void InitPython();
 
-  py::object BULLETSIM_API py_tracking(CapsuleRopePtr sim, BulletEnvironmentPtr env, py::object cam, py::object cloud, py::object rgb_image, py::object depth_image, int num_iter);
+  py::object BULLETSIM_API py_tracking(bs::CapsuleRopePtr sim, bs::BulletEnvironmentPtr env, py::object cam, py::object cloud, py::object rgb_image, py::object depth_image, int num_iter);
 
   
 }

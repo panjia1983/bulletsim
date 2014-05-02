@@ -1,9 +1,14 @@
 #include "bulletrac.h"
 #include "algorithm_common.h"
 
-namespace bs
+namespace bt
 {
   static py::object openravepy, numpy;
+
+  void InitPython() {
+    openravepy = py::import("openravepy");
+    numpy = py::import("numpy");
+  }
 
   template<typename T>
   struct type_traits {
@@ -77,7 +82,7 @@ namespace bs
 
 
 
-  TrackedRope::TrackedRope(CapsuleRopePtr sim, const Vector3f& default_color) : TrackedObject("rope")
+  TrackedRope::TrackedRope(bs::CapsuleRopePtr sim, const Vector3f& default_color) : TrackedObject("rope")
   {
     m_sim = sim;
     m_default_color = default_color;
@@ -107,7 +112,7 @@ namespace bs
     }
   }
 
-  std::vector<btVector3> tracking(CapsuleRopePtr sim, BulletEnvironmentPtr env, const btTransform& cam, ColorCloudPtr cloud, cv::Mat rgb_image, cv::Mat depth_image, int num_iter)
+  std::vector<btVector3> tracking(bs::CapsuleRopePtr sim, bs::BulletEnvironmentPtr env, const btTransform& cam, ColorCloudPtr cloud, cv::Mat rgb_image, cv::Mat depth_image, int num_iter)
   {
     Vector3f rope_color = averageColor(cloud);
     TrackedRope::Ptr rope(new TrackedRope(sim, rope_color));
@@ -129,13 +134,10 @@ namespace bs
       alg->maximizationStep(applyEvidence);
       env->Step(.03, 2, .015);
     }
-
-    MatrixXf& estPts = alg->m_estPts;
-    MatrixXf& obsPts = alg->m_obsPts;
-    MatrixXf& pZgivenC = alg->m_pZgivenC;
-    MatrixXf nodes = calculateNodesNaive(estPts, obsPts, pZgivenC);
     
-    return toBulletVectors(nodes);
+    std::vector<btVector3> nodes = scaleVecs(rope->getPoints(), 1);
+    
+    return nodes;
   }  
 
   cv::Mat fromNdarray3ToRGBImage(py::object a)
@@ -220,18 +222,15 @@ namespace bs
   }
 
 
-  py::object py_tracking(CapsuleRopePtr sim, BulletEnvironmentPtr env, py::object cam, py::object cloud, py::object rgb_image, py::object depth_image, int num_iter)
+  py::object py_tracking(bs::CapsuleRopePtr sim, bs::BulletEnvironmentPtr env, py::object cam, py::object cloud, py::object rgb_image, py::object depth_image, int num_iter)
   {
-    btTransform cam_ = toBtTransform(cam);
-
-    cv::Mat rgb_image_ = fromNdarray3ToRGBImage(rgb_image);
-
-    cv::Mat depth_image_ = fromNdarray2ToDepthImage(depth_image);
-
-    ColorCloudPtr cloud_(new ColorCloud(fromNdarray2ToColorCloud(cloud)));
     
+    btTransform cam_ = toBtTransform(cam);
+    cv::Mat rgb_image_ = fromNdarray3ToRGBImage(rgb_image);
+    
+    cv::Mat depth_image_ = fromNdarray2ToDepthImage(depth_image);
+    ColorCloudPtr cloud_(new ColorCloud(fromNdarray2ToColorCloud(cloud)));
     std::vector<btVector3> nodes = tracking(sim, env, cam_, cloud_, rgb_image_, depth_image_, num_iter);
-
     return toNdarray2(nodes);
   }
 
