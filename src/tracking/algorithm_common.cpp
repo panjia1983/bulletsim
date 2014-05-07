@@ -232,6 +232,48 @@ Eigen::MatrixXf calculateResponsibilitiesNaive(const Eigen::MatrixXf& estPts, co
 
 // gamma(z_nk) = p(z_k = 1 | c_n)
 Eigen::MatrixXf calculateResponsibilities(const Eigen::MatrixXf& estPts, const Eigen::MatrixXf& obsPts, const Eigen::MatrixXf& stdev, const Eigen::VectorXf& pVis, const Eigen::VectorXf& outlierDist, const Eigen::VectorXf& outlierStdev) {
+
+
+  std::ofstream estPts_file("estPts_offline_E.txt");
+  std::ofstream obsPts_file("obsPts_offline_E.txt");
+  std::ofstream stdev_file("stdev_offline_E.txt");
+  std::ofstream pVis_file("pVis_offline_E.txt");
+  std::ofstream outlierDist_file("outlierDist_offline_E.txt");
+  std::ofstream outlierStdev_file("outlierStdev_offline_E.txt");
+
+  for (int i = 0; i < pVis.size(); ++i)
+    pVis_file << pVis(i) << " ";
+  
+  for (int i = 0; i < outlierDist.size(); ++i)
+    outlierDist_file << outlierDist(i) << " ";
+
+  for (int i = 0; i < outlierStdev.size(); ++i)
+    outlierStdev_file << outlierStdev(i) << " ";
+
+  for (int i = 0; i < estPts.rows(); ++i) {
+    for (int j = 0; j < estPts.cols(); ++j) {
+      estPts_file << estPts(i, j) << " ";
+    }
+    estPts_file << endl;
+  }
+
+  for (int i = 0; i < obsPts.rows(); ++i) {
+    for (int j = 0; j < obsPts.cols(); ++j) {
+      obsPts_file << obsPts(i, j) << " ";
+    }
+    obsPts_file << endl;
+  }
+
+  for (int i = 0; i < stdev.rows(); ++i) {
+    for (int j = 0; j < stdev.cols(); ++j) {
+      stdev_file << stdev(i, j) << " ";
+    }
+    stdev_file << endl;
+  }
+
+
+
+
 	int K = estPts.rows(); //nodes
 	int N = obsPts.rows(); //observations
 	int F = estPts.cols(); //features

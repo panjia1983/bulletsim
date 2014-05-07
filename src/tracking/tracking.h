@@ -7,6 +7,5 @@ namespace bs {
 
   void InitPython();
 
-  py::object py_tracking(py::object nodes, float rope_radius, py::object transformer, py::object filtered_clouds, py::object rgb_images, py::object depth_images, int num_iter);
-  py::object py_tracking2(py::object nodes, float rope_radius, py::object transformer, py::list filtered_clouds, py::object rgb_images, py::object depth_images, int num_iter);
+  py::object py_tracking(py::object nodes, float rope_radius, py::object transformer, py::list filtered_clouds, py::object rgb_images, py::object depth_images, int num_iter);
 }

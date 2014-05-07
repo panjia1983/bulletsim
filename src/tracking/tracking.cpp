@@ -80,13 +80,11 @@ namespace bs
   }
 
 
-
-
   std::vector<std::vector<btVector3> > tracking(const std::vector<btVector3>& nodes, float rope_radius, const btTransform& cam, const std::vector<ColorCloudPtr>& filtered_clouds, std::vector<cv::Mat>& rgb_images, std::vector<cv::Mat>& depth_images, int num_iter)
   {
     CoordinateTransformer transformer(cam);
     std::vector<std::vector<btVector3> > tracking_results;
-    GeneralConfig::scale = 100;
+    GeneralConfig::scale = 1;
     BulletConfig::maxSubSteps = 0;
     BulletConfig::gravity = btVector3(0,0,-0.1);
 
@@ -108,11 +106,11 @@ namespace bs
     TrackedObjectFeatureExtractor::Ptr objectFeatures(new TrackedObjectFeatureExtractor(trackedObj));
     CloudFeatureExtractor::Ptr cloudFeatures(new CloudFeatureExtractor());
     PhysicsTracker::Ptr alg(new PhysicsTracker(objectFeatures, cloudFeatures, visInterface));
-    PhysicsTrackerVisualizer::Ptr trackingVisualizer(new PhysicsTrackerVisualizer(&scene, alg));
 
     bool applyEvidence = true;
+    scene.setSyncTime(false);
 
-    for (int n = 0; n < rgb_images.size(); ++n) {
+    for (int n = 1; n < rgb_images.size(); ++n) {
       cloudFeatures->updateInputs(filtered_clouds[n], rgb_images[n], &transformer);
       visInterface->visibilities[0]->updateInput(depth_images[n]);
 
@@ -120,14 +118,10 @@ namespace bs
         alg->updateFeatures();
         alg->expectationStep();
         alg->maximizationStep(applyEvidence);
-        scene.step(.03, 2, .015);   
+        scene.step(.03, 2, .015);  
       }
       
-      std::vector<btVector3> nodes = scaleVecs(trackedObj->getPoints(), 1/METERS);
-      for (int i = 0; i < nodes.size(); ++i) {
-        cout << nodes[i].x() << " " << nodes[i].y() << " " << nodes[i].z() << endl;
-      }
-      
+      std::vector<btVector3> nodes = scaleVecs(trackedObj->getPoints(), 1/METERS);      
       tracking_results.push_back(nodes);
     }
 
@@ -242,7 +236,7 @@ namespace bs
       cv::Mat image(out_dim1, out_dim2, CV_32FC1);
       for (int i = 0; i < out_dim1; ++i) {
         for (int j = 0; j < out_dim2; ++j) {
-          image.at<float>(i, j) = *(pin + out_dim1 * out_dim2 * n + out_dim1 * i + j) / 1000.0;
+          image.at<float>(i, j) = *(pin + out_dim1 * out_dim2 * n + out_dim2 * i + j) / 1000.0;
         }
       }
 
@@ -303,7 +297,7 @@ namespace bs
       color_cloud.points.resize(out_dim1);
     
       for (int i = 0; i < out_dim1; ++i) {
-        btScalar* cur = pin + out_dim1 * out_dim2 * n + out_dim1 * i;
+        btScalar* cur = pin + out_dim1 * out_dim2 * n + out_dim2 * i;
         color_cloud.points[i].x = *cur;
         color_cloud.points[i].y = *(cur + 1);
         color_cloud.points[i].z = *(cur + 2);
@@ -397,31 +391,7 @@ namespace bs
   }
 
 
-  py::object py_tracking(py::object nodes, float rope_radius, py::object transformer, py::object filtered_clouds, py::object rgb_images, py::object depth_images, int num_iter)
-  {
-    btTransform transformer_ = toBtTransform(transformer);
-    std::vector<cv::Mat> rgb_images_;
-    std::vector<cv::Mat> depth_images_;
-    std::vector<ColorCloudPtr> filtered_clouds_;
-    std::vector<btVector3> nodes_;
-
-    rgb_images_ = fromNdarray4ToRGBImages(rgb_images);
-    depth_images_ = fromNdarray3ToDepthImages(depth_images);
-    std::vector<ColorCloud> filtered_clouds__ = fromNdarray3ToColorClouds(filtered_clouds);
-    nodes_ = fromNdarray2ToNodes(nodes);
-
-    for (int i = 0; i < filtered_clouds__.size(); ++i) {
-      ColorCloudPtr filtered_cloud(new ColorCloud(filtered_clouds__[i]));
-      filtered_clouds_.push_back(filtered_cloud);
-    }
-  
-    std::vector<std::vector<btVector3> > tracking_results = tracking(nodes_, rope_radius, transformer_, filtered_clouds_, rgb_images_, depth_images_, num_iter);
-
-    return toNdarray3(tracking_results);
-  }
-
-
-  py::object py_tracking2(py::object nodes, float rope_radius, py::object transformer, py::list filtered_clouds, py::object rgb_images, py::object depth_images, int num_iter)
+  py::object py_tracking(py::object nodes, float rope_radius, py::object transformer, py::list filtered_clouds, py::object rgb_images, py::object depth_images, int num_iter)
   {
     int dummy_argc=0;
     ros::init((int&)dummy_argc, NULL, "tracking");  
@@ -437,7 +407,6 @@ namespace bs
     depth_images_ = fromNdarray3ToDepthImages(depth_images);
     std::vector<ColorCloud> filtered_clouds__ = fromNdarray2ListToColorClouds(filtered_clouds);
     nodes_ = fromNdarray2ToNodes(nodes);
-    
     
     for (int i = 0; i < filtered_clouds__.size(); ++i) {
       ColorCloudPtr filtered_cloud(new ColorCloud(filtered_clouds__[i]));

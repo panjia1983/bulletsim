@@ -12,6 +12,4 @@ BOOST_PYTHON_MODULE(cbulletracpy2) {
   bs::InitPython();
 
   py::def("py_tracking", bs::py_tracking);
-  py::def("py_tracking2", bs::py_tracking2);
-
 }

@@ -40,10 +40,24 @@ void PhysicsTracker::updateFeatures() {
 	m_obsPts = m_obsFeatures->getFeatures();
 
 	m_vis = m_visInt->checkNodeVisibility(m_objFeatures->m_obj);
+
+        std::ofstream estPts_file0("estPts_offline0.txt");
+        std::ofstream vis_file("vis_offline.txt");
+        
+        for (int i = 0; i < m_estPts.rows(); ++i) {
+          for (int j = 0; j < m_estPts.cols(); ++j) {
+            estPts_file0 << m_estPts(i, j) << " ";
+          }
+          estPts_file0 << endl;
+        }
+
+        for (int i = 0; i < m_vis.size(); ++i) {
+          vis_file << m_vis(i) << " ";
+        }
+        vis_file << endl;
 }
 
 void PhysicsTracker::expectationStep() {
-
   boost::posix_time::ptime e_time = boost::posix_time::microsec_clock::local_time();
   m_pZgivenC = calculateResponsibilities(m_estPts, m_obsPts, m_stdev, m_vis, m_objFeatures->m_obj->getOutlierDist(), m_objFeatures->m_obj->getOutlierStdev());
   LOG_DEBUG("E time " << (boost::posix_time::microsec_clock::local_time() - e_time).total_milliseconds());

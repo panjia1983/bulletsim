@@ -30,7 +30,6 @@ using namespace std;
 TrackedObject::Ptr toTrackedObject(const vector<btVector3>& nodes_, float rope_radius, ColorCloudPtr cloud, cv::Mat image, cv::Mat mask, CoordinateTransformer* transformer)
 {
   vector<btVector3> nodes(nodes_);
-  BOOST_FOREACH(btVector3& node, nodes) node += btVector3(0,0,.01);
   CapsuleRope::Ptr sim(new CapsuleRope(scaleVecs(nodes,METERS), rope_radius*METERS));
   TrackedRope::Ptr tracked_rope(new TrackedRope(sim));
 
