@@ -8,66 +8,81 @@
 #include "feature_extractor.h"
 #include "utils/logging.h"
 #include <cv.h>
+#include <fstream>
 
 using namespace Eigen;
 using namespace std;
 
 //#define CHECK_CORRECTNESS
 
-PhysicsTracker::PhysicsTracker(TrackedObjectFeatureExtractor::Ptr object_features, FeatureExtractor::Ptr observation_features, VisibilityInterface::Ptr visibility_interface) :
-	m_objFeatures(object_features),
-	m_obsFeatures(observation_features),
-	m_visInt(visibility_interface)
+PhysicsTracker::PhysicsTracker(TrackedObjectFeatureExtractor::Ptr object_features, FeatureExtractor::Ptr observation_features, VisibilityInterface::Ptr visibility_interface, const Eigen::MatrixXf& stdev) :
+  m_objFeatures(object_features),
+  m_obsFeatures(observation_features),
+  m_visInt(visibility_interface)
 {
-	m_priorDist = m_objFeatures->m_obj->getPriorDist();
-	m_stdev = m_priorDist.transpose().replicate(m_objFeatures->m_obj->m_nNodes, 1);
+  m_priorDist = m_objFeatures->m_obj->getPriorDist();
+  m_stdev = stdev;
 
-	m_outlierDist = m_objFeatures->m_obj->getOutlierDist();
+  m_outlierDist = m_objFeatures->m_obj->getOutlierDist();
+}
+
+
+PhysicsTracker::PhysicsTracker(TrackedObjectFeatureExtractor::Ptr object_features, FeatureExtractor::Ptr observation_features, VisibilityInterface::Ptr visibility_interface) :
+  m_objFeatures(object_features),
+  m_obsFeatures(observation_features),
+  m_visInt(visibility_interface)
+{
+  m_priorDist = m_objFeatures->m_obj->getPriorDist();
+  m_stdev = m_priorDist.transpose().replicate(m_objFeatures->m_obj->m_nNodes, 1);
+
+  m_outlierDist = m_objFeatures->m_obj->getOutlierDist();
 }
 
 // Before calling this function, the inputs of the FeatureExtractors should be updated (if any)
 void PhysicsTracker::updateFeatures() {
-	m_objFeatures->updateFeatures();
-	m_obsFeatures->updateFeatures();
-	//shift the point cloud in the z coordinate
-	//m_obsFeatures->getFeatures(FE::FT_XYZ).col(2) += VectorXf::Ones(m_obsFeatures->getFeatures(FE::FT_XYZ).rows()) * 0.01*METERS;
-	for (int i=0; i<m_obsFeatures->getFeatures(FE::FT_XYZ).rows(); i++)
-		if (m_obsFeatures->getFeatures(FE::FT_XYZ)(i,2) < 0.005*METERS)
-			m_obsFeatures->getFeatures(FE::FT_XYZ)(i,2) = 0.005*METERS;
+  m_objFeatures->updateFeatures();
+  m_obsFeatures->updateFeatures();
+  //shift the point cloud in the z coordinate
+  //m_obsFeatures->getFeatures(FE::FT_XYZ).col(2) += VectorXf::Ones(m_obsFeatures->getFeatures(FE::FT_XYZ).rows()) * 0.01*METERS;
+  
+  for (int i=0; i<m_obsFeatures->getFeatures(FE::FT_XYZ).rows(); i++)
+    if (m_obsFeatures->getFeatures(FE::FT_XYZ)(i,2) < 0.005*METERS)
+      m_obsFeatures->getFeatures(FE::FT_XYZ)(i,2) = 0.005*METERS;
 
-	m_estPts = m_objFeatures->getFeatures();
-	m_obsPts = m_obsFeatures->getFeatures();
+  m_estPts = m_objFeatures->getFeatures();
+  m_obsPts = m_obsFeatures->getFeatures();  
 
-	m_vis = m_visInt->checkNodeVisibility(m_objFeatures->m_obj);
+  m_vis = m_visInt->checkNodeVisibility(m_objFeatures->m_obj);
+
+  std::ofstream estPts_file0("estPts_online0.txt");
+  std::ofstream vis_file("vis_online.txt");
+        
+  for (int i = 0; i < m_estPts.rows(); ++i) {
+    for (int j = 0; j < m_estPts.cols(); ++j) {
+      estPts_file0 << m_estPts(i, j) << " ";
+    }
+    estPts_file0 << endl;
+  }
+
+  for (int i = 0; i < m_vis.size(); ++i) {
+    vis_file << m_vis(i) << " ";
+  }
+  vis_file << endl;
+
+
 }
 
 void PhysicsTracker::expectationStep() {
-
+  
   boost::posix_time::ptime e_time = boost::posix_time::microsec_clock::local_time();
   m_pZgivenC = calculateResponsibilities(m_estPts, m_obsPts, m_stdev, m_vis, m_objFeatures->m_obj->getOutlierDist(), m_objFeatures->m_obj->getOutlierStdev());
   LOG_DEBUG("E time " << (boost::posix_time::microsec_clock::local_time() - e_time).total_milliseconds());
 
 #if 0
-	if (isFinite(m_estPts) && isFinite(m_obsPts) && isFinite(m_vis) && isFinite(m_stdev)) {
-////		float a = 0.1;
-////		float b = 0.9;
-////		VectorXf alpha = a + m_vis.array() * (b-a);
-//		VectorXf alpha = m_vis;
-//		if (m_pZgivenC.rows()!=0) alpha += m_pZgivenC.rowwise().sum();
-//		VectorXf expectedPi = alpha/alpha.sum();
-//		m_pZgivenC = calculateResponsibilitiesNaive(m_estPts, m_obsPts, m_stdev, expectedPi, m_objFeatures->m_obj->getOutlierDist(), m_objFeatures->m_obj->getOutlierStdev());
-
-		m_pZgivenC = calculateResponsibilitiesNaive(m_estPts, m_obsPts, m_stdev, m_vis, m_objFeatures->m_obj->getOutlierDist(), m_objFeatures->m_obj->getOutlierStdev());
-	} else
-		cout << "WARNING: PhysicsTracker: the input is not finite" << endl;
-#endif
-
-
-#ifdef CHECK_CORRECTNESS
   boost::posix_time::ptime en_time = boost::posix_time::microsec_clock::local_time();
   MatrixXf pZgivenC_naive = calculateResponsibilitiesNaive(m_estPts, m_obsPts, m_stdev, m_vis, m_objFeatures->m_obj->getOutlierDist(), m_objFeatures->m_obj->getOutlierStdev());
   cout << "E naive time " << (boost::posix_time::microsec_clock::local_time() - en_time).total_milliseconds() << endl;
-  assert(isApproxEq(pZgivenC_naive, m_pZgivenC));
+  cout << "Naive E Checking " << isApproxEq(pZgivenC_naive, m_pZgivenC) << endl;
 #endif
 }
 
@@ -85,8 +100,8 @@ void PhysicsTracker::maximizationStep(bool apply_evidence) {
 #if 0
   //boost::posix_time::ptime evidence_time = boost::posix_time::microsec_clock::local_time();
 
-	if (apply_evidence && isFinite(m_pZgivenC) && isFinite(m_estPts) && isFinite(m_obsPts))
-		m_objFeatures->m_obj->applyEvidence(m_pZgivenC, m_obsFeatures->getFeatures(FE::FT_XYZ));
+  if (apply_evidence && isFinite(m_pZgivenC) && isFinite(m_estPts) && isFinite(m_obsPts))
+    m_objFeatures->m_obj->applyEvidence(m_pZgivenC, m_obsFeatures->getFeatures(FE::FT_XYZ));
   //cout << "Evidence time " << (boost::posix_time::microsec_clock::local_time() - evidence_time).total_milliseconds() << endl;
 
   //boost::posix_time::ptime m_time = boost::posix_time::microsec_clock::local_time();
@@ -94,11 +109,11 @@ void PhysicsTracker::maximizationStep(bool apply_evidence) {
   //cout << "M time " << (boost::posix_time::microsec_clock::local_time() - m_time).total_milliseconds() << endl;
 #endif
 
-#ifdef CHECK_CORRECTNESS
+#if 0
   boost::posix_time::ptime mn_time = boost::posix_time::microsec_clock::local_time();
   MatrixXf stdev_naive = calculateStdevNaive(m_estPts, m_obsPts, m_pZgivenC, m_priorDist, 2);
   cout << "M naive time " << (boost::posix_time::microsec_clock::local_time() - mn_time).total_milliseconds() << endl;
-  assert(isApproxEq(stdev_naive, m_stdev));
+  cout << "Naive M Checking " << isApproxEq(stdev_naive, m_stdev) << endl;
 #endif
 }
 

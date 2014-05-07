@@ -1,5 +1,6 @@
 #include "bulletrac.h"
 #include "algorithm_common.h"
+#include <fstream>
 
 namespace bt
 {
@@ -56,6 +57,27 @@ namespace bt
     return out;
   }
 
+  py::object toNdarray2(const Eigen::MatrixXf& stdev) {
+    py::object out = numpy.attr("empty")(py::make_tuple(stdev.rows(), stdev.cols()), type_traits<btScalar>::npname);
+    btScalar* pout = getPointer<btScalar>(out);
+    for (int i = 0; i < stdev.rows(); ++i) {
+      for (int j = 0; j < stdev.cols(); ++j) {
+        *(pout + stdev.cols()*i + j) = stdev(i, j);
+      }
+    }
+    return out;
+  }
+
+
+  py::list toNdarray2list(const vector<btVector3>& vs, const Eigen::MatrixXf& stdev) {
+    py::list l;
+    py::object nodes = toNdarray2(vs);
+    py::object stdevr = toNdarray2(stdev);
+    l.append(nodes);
+    l.append(stdevr);
+    return l;
+  }
+
   btTransform toBtTransform(py::object py_hmat, btScalar scale=1) {
     vector<btScalar> hmat; size_t dim0, dim1;
     fromNdarray2(py_hmat.attr("T"), hmat, dim0, dim1);
@@ -100,8 +122,49 @@ namespace bt
     vector<btVector3> estVel = m_sim->GetLinearVelocities();
     vector<float> masses = m_sim->GetMasses();
 
-    vector<btVector3> impulses = calcImpulsesDamped(estPos, estVel, toBulletVectors(FE::activeFeatures2Feature(obsPts, FE::FT_XYZ)), corr, masses, TrackingConfig::kp_rope, TrackingConfig::kd_rope);
+    std::ofstream obsPts_file("obsPts_online.txt");
+    std::ofstream estPos_file("estPos_online.txt");
+    std::ofstream corr_file("corr_online.txt");
+    std::ofstream estVel_file("estVel_online.txt");
+    
+    for (int i = 0; i < obsPts.rows(); ++i) {
+      for (int j = 0; j < obsPts.cols(); ++j) {
+        obsPts_file << obsPts(i, j) << " ";
+      }
+      obsPts_file << endl;
+    }
 
+    for (int i = 0; i < estPos.size(); ++i) {
+      estPos_file << estPos[i].x() << " " << estPos[i].y() << " " << estPos[i].z() << endl;
+    }
+
+    for (int i = 0; i < estVel.size(); ++i) {
+      estVel_file << estVel[i].x() << " " << estVel[i].y() << " " << estVel[i].z() << endl;
+    }
+
+    for (int i = 0; i < corr.rows(); ++i) {
+      for (int j = 0; j < corr.cols(); ++j) {
+        corr_file << corr(i, j) << " ";
+      }
+      corr_file << endl;
+    }
+
+    cout << "parameter" << endl;
+    cout << TrackingConfig::kp_rope << " " << TrackingConfig::kd_rope << endl;
+    for (int i = 0; i < masses.size(); ++i)
+      cout << masses[i] << " ";
+    cout << endl;
+
+    vector<btVector3> impulses = calcImpulsesDamped(estPos, estVel, toBulletVectors(FE::activeFeatures2Feature(obsPts, FE::FT_XYZ)), corr, masses, TrackingConfig::kp_rope, TrackingConfig::kd_rope);
+    
+    cout << "impulses" << endl;
+    for (int i = 0; i < impulses.size(); ++i) {
+      cout << impulses[i].x() << " " << impulses[i].y() << " " << impulses[i].z() << endl;
+    }
+
+    int tmp;
+    std::cin >> tmp;
+    
     m_sim->ApplyCentralImpulses(impulses);
   }
 
@@ -112,30 +175,39 @@ namespace bt
     }
   }
 
-  std::vector<btVector3> tracking(bs::CapsuleRopePtr sim, bs::BulletEnvironmentPtr env, const btTransform& cam, ColorCloudPtr cloud, cv::Mat rgb_image, cv::Mat depth_image, int num_iter)
+  std::vector<btVector3> tracking(bs::CapsuleRopePtr sim, bs::BulletEnvironmentPtr env, const btTransform& cam, ColorCloudPtr cloud, cv::Mat rgb_image, cv::Mat depth_image, int num_iter, Eigen::MatrixXf& stdev)
   {
     Vector3f rope_color = averageColor(cloud);
     TrackedRope::Ptr rope(new TrackedRope(sim, rope_color));
     rope->init();
+
     MultiVisibility::Ptr visInterface(new MultiVisibility());
     CoordinateTransformer transformer(cam);
     visInterface->addVisibility(DepthImageVisibility::Ptr(new DepthImageVisibility(&transformer)));
     TrackedObjectFeatureExtractor::Ptr objectFeatures(new TrackedObjectFeatureExtractor(rope));
     CloudFeatureExtractor::Ptr cloudFeatures(new CloudFeatureExtractor());
-    PhysicsTracker::Ptr alg(new PhysicsTracker(objectFeatures, cloudFeatures, visInterface));
+
+    PhysicsTracker::Ptr alg;
+    if (stdev.rows() == 0)
+      alg = PhysicsTracker::Ptr(new PhysicsTracker(objectFeatures, cloudFeatures, visInterface));
+    else
+      alg = PhysicsTracker::Ptr(new PhysicsTracker(objectFeatures, cloudFeatures, visInterface, stdev));
+
     
     bool applyEvidence = true;
+    cloudFeatures->updateInputs(cloud, rgb_image, &transformer);
+    visInterface->visibilities[0]->updateInput(depth_image);
+
     for (int i = 0; i < num_iter; ++i)
     {
-      cloudFeatures->updateInputs(cloud, rgb_image, &transformer);
-      visInterface->visibilities[0]->updateInput(depth_image);
       alg->updateFeatures();
       alg->expectationStep();
       alg->maximizationStep(applyEvidence);
       env->Step(.03, 2, .015);
     }
     
-    std::vector<btVector3> nodes = scaleVecs(rope->getPoints(), 1);
+    std::vector<btVector3> nodes = scaleVecs(rope->getPoints(), 1/METERS);
+    stdev = alg->m_stdev;
     
     return nodes;
   }  
@@ -221,17 +293,47 @@ namespace bt
     return color_cloud;
   }
 
-
-  py::object py_tracking(bs::CapsuleRopePtr sim, bs::BulletEnvironmentPtr env, py::object cam, py::object cloud, py::object rgb_image, py::object depth_image, int num_iter)
+  Eigen::MatrixXf fromNdarrayToMatrix(py::object a)
   {
+    a = ensureFormat<btScalar>(a);
+    py::object shape = a.attr("shape");
     
+    if (py::len(shape) == 1) {
+      return Eigen::MatrixXf(0, 0);
+    }
+
+    if (py::len(shape) != 2) {
+      throw std::runtime_error((boost::format("expected 2-d array, got %d-d instead") % py::len(shape)).str());
+    }
+    
+    size_t out_dim0 = py::extract<size_t>(shape[0]);
+    size_t out_dim1 = py::extract<size_t>(shape[1]);
+
+    btScalar* pin = getPointer<btScalar>(a);
+
+    Eigen::MatrixXf m(out_dim0, out_dim1);
+    for (int i = 0; i < out_dim0; ++i) {
+      for (int j = 0; j < out_dim1; ++j) {
+        m(i, j) = *(pin + i * out_dim1 + j);
+      }
+    }
+
+    return m;
+  }
+
+
+  py::list py_tracking(bs::CapsuleRopePtr sim, bs::BulletEnvironmentPtr env, py::object cam, py::object cloud, py::object rgb_image, py::object depth_image, int num_iter, py::object stdev)
+  {
     btTransform cam_ = toBtTransform(cam);
     cv::Mat rgb_image_ = fromNdarray3ToRGBImage(rgb_image);
     
     cv::Mat depth_image_ = fromNdarray2ToDepthImage(depth_image);
     ColorCloudPtr cloud_(new ColorCloud(fromNdarray2ToColorCloud(cloud)));
-    std::vector<btVector3> nodes = tracking(sim, env, cam_, cloud_, rgb_image_, depth_image_, num_iter);
-    return toNdarray2(nodes);
+    Eigen::MatrixXf stdev_ = fromNdarrayToMatrix(stdev);
+
+    std::vector<btVector3> nodes = tracking(sim, env, cam_, cloud_, rgb_image_, depth_image_, num_iter, stdev_);
+    // return toNdarray2(nodes);
+    return toNdarray2list(nodes, stdev_);
   }
 
 }

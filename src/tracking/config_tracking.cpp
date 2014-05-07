@@ -8,7 +8,8 @@ std::string TrackingConfig::rgbTopic = "/kinect1/rgb/image_rect_color";
 std::string TrackingConfig::fullCloudTopic = "/kinect1/depth_registered/points";
 
 std::vector<std::string> TrackingConfig::cameraTopics = boost::assign::list_of("/kinect1");
-std::vector<int> TrackingConfig::featureTypes = boost::assign::list_of(FeatureExtractor::FT_XYZ)(FeatureExtractor::FT_LAB);
+//std::vector<int> TrackingConfig::featureTypes = boost::assign::list_of(FeatureExtractor::FT_XYZ)(FeatureExtractor::FT_LAB);
+std::vector<int> TrackingConfig::featureTypes = boost::assign::list_of(FeatureExtractor::FT_XYZ);
 
 float TrackingConfig::downsample = 0.02;
 

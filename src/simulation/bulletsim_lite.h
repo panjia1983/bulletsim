@@ -85,6 +85,7 @@ struct BULLETSIM_API SimulationParams {
   void Apply();
 };
 
+
 class BULLETSIM_API BulletEnvironment {
 public:
   BulletEnvironment(EnvironmentBasePtr rave_env, const vector<string>& dynamic_obj_names);

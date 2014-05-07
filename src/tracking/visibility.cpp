@@ -5,6 +5,7 @@
 #include "simulation/config_bullet.h"
 #include "utils/my_assert.h"
 #include "simulation/bullet_io.h"
+#include <fstream>
 
 using namespace Eigen;
 
@@ -21,7 +22,20 @@ VectorXf DepthImageVisibility::checkNodeVisibility(TrackedObject::Ptr obj) {
   MatrixXf ptsCam = toEigenMatrix(m_transformer->toCamFromWorldN(obj->getPoints()));
   VectorXf ptDists = ptsCam.rowwise().norm();
   MatrixXi uvs = xyz2uv(ptsCam);
-  VectorXf vis(ptsCam.rows(),true);
+  VectorXf vis(ptsCam.rows());
+  for (int i = 0; i < vis.size(); ++i)
+    vis(i) = 1.0;
+
+  for(int i = 0; i < ptDists.size(); ++i)
+    cout << ptDists(i) << " ";
+  cout << endl;
+  std::ofstream depth_file("depth_online.txt");
+  for (int i = 0; i < m_depth.rows; ++i) {
+    for (int j = 0; j < m_depth.cols; ++j) {
+      depth_file << m_depth.at<float>(i, j) << " ";
+    }
+    depth_file << endl;
+  }
 
   assert(m_depth.type() == CV_32FC1);
   float occ_dist = DEPTH_OCCLUSION_DIST*METERS;
@@ -30,10 +44,15 @@ VectorXf DepthImageVisibility::checkNodeVisibility(TrackedObject::Ptr obj) {
     int u = uvs(iPt,0);
     int v = uvs(iPt,1);
     if (u<m_depth.rows && v<m_depth.cols && u>0 && v>0) {
-      vis[iPt] = !isfinite(m_depth.at<float>(u,v)) || (m_depth.at<float>(u,v) + occ_dist > ptDists[iPt]);
+      bool is_vis = !isfinite(m_depth.at<float>(u,v)) || (m_depth.at<float>(u,v) + occ_dist > ptDists[iPt]);
+      if (is_vis)
+        vis(iPt) = 1.0;
+      else 
+        vis(iPt) = 0.0;
     // see it if there's no non-rope pixel in front of it
     }
   }
+
   return vis;
 }
 

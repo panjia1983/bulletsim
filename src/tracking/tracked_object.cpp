@@ -3,6 +3,7 @@
 #include "config_tracking.h"
 #include "utils/utils_vector.h"
 #include "feature_extractor.h"
+#include <fstream>
 
 using namespace std;
 
@@ -34,6 +35,7 @@ const Eigen::VectorXf TrackedObject::getPriorDist() {
 
 std::vector<btVector3> calcImpulsesDamped(const std::vector<btVector3>& estPos, const std::vector<btVector3>& estVel,
   const std::vector<btVector3>& obsPts, const Eigen::MatrixXf& corr, const vector<float>& masses, float kp, float kd) {
+  
   int K = estPos.size();
   int N = obsPts.size();
   assert(estVel.size() == K);
@@ -43,21 +45,23 @@ std::vector<btVector3> calcImpulsesDamped(const std::vector<btVector3>& estPos, 
   vector<btVector3> impulses(K);
 
   for (int k=0; k<K; k++) {
-  	btVector3 dv = -kd * estVel[k];
-  	for (int n=0; n<N; n++)
-			dv += (kp * corr(k,n)) * (obsPts[n] - estPos[k]);
-		impulses[k] = masses[k]*dv;
-		// XXX SHOULD THERE BE DT?
+    btVector3 dv = -kd * estVel[k];
+    for (int n=0; n<N; n++)
+      dv += (kp * corr(k,n)) * (obsPts[n] - estPos[k]);
+    impulses[k] = masses[k]*dv;
+    // XXX SHOULD THERE BE DT?
   }
 
-//  float max_impulse=1;
-//  for (int k=0; k<K; k++) {
-//  	if (impulses[k].length2() > max_impulse*max_impulse) {
-//  		impulses[k].normalize();
-//			impulses[k] *= max_impulse;
-//  	}
-//  }
-//  cout << "max impulse mag " << max(impulses).length() << endl;
+  /*
+  float max_impulse=1;
+  for (int k=0; k<K; k++) {
+    if (impulses[k].length2() > max_impulse*max_impulse) {
+      impulses[k].normalize();
+      impulses[k] *= max_impulse;
+    }
+  }
+  cout << "max impulse mag " << max(impulses).length() << endl;
+  */
 
   return impulses;
 }
