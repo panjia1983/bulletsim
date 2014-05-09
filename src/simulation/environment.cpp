@@ -100,10 +100,10 @@ void Environment::step(btScalar dt, int maxSubSteps, btScalar fixedTimeStep) {
     ObjectList::iterator i;
     for (i = objects.begin(); i != objects.end(); ++i)
         (*i)->prePhysics();
-    if (dt > 0) {
+    //if (dt > 0) {
       bullet->dynamicsWorld->stepSimulation(dt, maxSubSteps, fixedTimeStep);
       bullet->softBodyWorldInfo->m_sparsesdf.GarbageCollect();
-    }
+      //}
 }
 
 Fork::Fork(const Environment *parentEnv_, BulletInstance::Ptr bullet) :

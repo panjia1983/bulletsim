@@ -161,9 +161,6 @@ namespace bt
     for (int i = 0; i < impulses.size(); ++i) {
       cout << impulses[i].x() << " " << impulses[i].y() << " " << impulses[i].z() << endl;
     }
-
-    int tmp;
-    std::cin >> tmp;
     
     m_sim->ApplyCentralImpulses(impulses);
   }
@@ -200,10 +197,34 @@ namespace bt
 
     for (int i = 0; i < num_iter; ++i)
     {
+      std::ofstream nodes_1_file("nodes_before_online.txt");
+      std::vector<btVector3> nodes_1 = scaleVecs(rope->getPoints(), 1/METERS);
+      for (int j = 0; j < nodes_1.size(); ++j) {
+        nodes_1_file << nodes_1[j].x() << " " << nodes_1[j].y() << " " << nodes_1[j].z() << endl;
+      }
+
       alg->updateFeatures();
       alg->expectationStep();
       alg->maximizationStep(applyEvidence);
+
+      std::ofstream nodes_3_file("nodes_step_online.txt");
+      std::vector<btVector3> nodes_3 = scaleVecs(rope->getPoints(), 1/METERS);
+      for (int j = 0; j < nodes_3.size(); ++j) {
+        nodes_3_file << nodes_3[j].x() << " " << nodes_3[j].y() << " " << nodes_3[j].z() << endl;
+      }
+
+
       env->Step(.03, 2, .015);
+
+      std::ofstream nodes_2_file("nodes_after_online.txt");
+      std::vector<btVector3> nodes_2 = scaleVecs(rope->getPoints(), 1/METERS);
+      for (int j = 0; j < nodes_2.size(); ++j) {
+        nodes_2_file << nodes_2[j].x() << " " << nodes_2[j].y() << " " << nodes_2[j].z() << endl;
+      }
+
+      int tmp;
+      std::cin >> tmp;
+
     }
     
     std::vector<btVector3> nodes = scaleVecs(rope->getPoints(), 1/METERS);
@@ -332,7 +353,6 @@ namespace bt
     Eigen::MatrixXf stdev_ = fromNdarrayToMatrix(stdev);
 
     std::vector<btVector3> nodes = tracking(sim, env, cam_, cloud_, rgb_image_, depth_image_, num_iter, stdev_);
-    // return toNdarray2(nodes);
     return toNdarray2list(nodes, stdev_);
   }
 
