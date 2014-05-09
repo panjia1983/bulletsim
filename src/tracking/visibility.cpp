@@ -26,6 +26,7 @@ VectorXf DepthImageVisibility::checkNodeVisibility(TrackedObject::Ptr obj) {
   for (int i = 0; i < vis.size(); ++i)
     vis(i) = 1.0;
 
+  cout << "ptDists" << endl;
   for(int i = 0; i < ptDists.size(); ++i)
     cout << ptDists(i) << " ";
   cout << endl;

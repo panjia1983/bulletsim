@@ -115,14 +115,44 @@ namespace bs
       visInterface->visibilities[0]->updateInput(depth_images[n]);
 
       for (int i = 0; i < num_iter; ++i) {
+
+        std::ofstream nodes_1_file("nodes_before_offline.txt");
+        std::vector<btVector3> nodes_1 = scaleVecs(trackedObj->getPoints(), 1/METERS);
+        for (int j = 0; j < nodes_1.size(); ++j) {
+          nodes_1_file << nodes_1[j].x() << " " << nodes_1[j].y() << " " << nodes_1[j].z() << endl;
+        }
+
         alg->updateFeatures();
         alg->expectationStep();
         alg->maximizationStep(applyEvidence);
+
+        std::ofstream nodes_3_file("nodes_step_offline.txt");
+        std::vector<btVector3> nodes_3 = scaleVecs(trackedObj->getPoints(), 1/METERS);
+        for (int j = 0; j < nodes_3.size(); ++j) {
+          nodes_3_file << nodes_3[j].x() << " " << nodes_3[j].y() << " " << nodes_3[j].z() << endl;
+        }
+
+
         scene.step(.03, 2, .015);  
+
+
+        std::ofstream nodes_2_file("nodes_after_offline.txt");
+        std::vector<btVector3> nodes_2 = scaleVecs(trackedObj->getPoints(), 1/METERS);
+        for (int j = 0; j < nodes_2.size(); ++j) {
+          nodes_2_file << nodes_2[j].x() << " " << nodes_2[j].y() << " " << nodes_2[j].z() << endl;
+        }
+
+        int tmp;
+        std::cin >> tmp;
+
+
       }
       
       std::vector<btVector3> nodes = scaleVecs(trackedObj->getPoints(), 1/METERS);      
       tracking_results.push_back(nodes);
+
+      int tmp;
+      std::cin >> tmp;
     }
 
     return tracking_results;

@@ -78,8 +78,6 @@ void TrackedRope::applyEvidence(const Eigen::MatrixXf& corr, const MatrixXf& obs
     cout << impulses[i].x() << " " << impulses[i].y() << " " << impulses[i].z() << endl;
   }
 
-  int tmp;
-  std::cin >> tmp;
 
   for (int i=0; i<m_nNodes; ++i) getSim()->children[i]->rigidBody->applyCentralImpulse(impulses[i]);
 }
