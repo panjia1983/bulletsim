@@ -26,19 +26,6 @@ VectorXf DepthImageVisibility::checkNodeVisibility(TrackedObject::Ptr obj) {
   for (int i = 0; i < vis.size(); ++i)
     vis(i) = 1.0;
 
-  cout << "ptDists" << endl;
-  for(int i = 0; i < ptDists.size(); ++i)
-    cout << ptDists(i) << " ";
-  cout << endl;
-  std::ofstream depth_file("depth_offline.txt");
-  for (int i = 0; i < m_depth.rows; ++i) {
-    for (int j = 0; j < m_depth.cols; ++j) {
-      depth_file << m_depth.at<float>(i, j) << " ";
-    }
-    depth_file << endl;
-  }
-
-
   assert(m_depth.type() == CV_32FC1);
   float occ_dist = DEPTH_OCCLUSION_DIST*METERS;
 

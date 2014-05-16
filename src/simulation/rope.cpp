@@ -156,7 +156,7 @@ vector<btMatrix3x3> CapsuleRope::getRotations() {
 	vector<btMatrix3x3> out;
 	for (int i=0; i < children.size(); i++) {
 		btRigidBody* body = children[i]->rigidBody.get();
-		btCapsuleShape* capsule = dynamic_cast<btCapsuleShapeX*>(body->getCollisionShape());
+                //		btCapsuleShape* capsule = dynamic_cast<btCapsuleShapeX*>(body->getCollisionShape());
 		btTransform tf = body->getCenterOfMassTransform();
 		out.push_back(tf.getBasis());
 	}
