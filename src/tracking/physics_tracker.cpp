@@ -53,23 +53,6 @@ void PhysicsTracker::updateFeatures() {
   m_obsPts = m_obsFeatures->getFeatures();  
 
   m_vis = m_visInt->checkNodeVisibility(m_objFeatures->m_obj);
-
-  std::ofstream estPts_file0("estPts_online0.txt");
-  std::ofstream vis_file("vis_online.txt");
-        
-  for (int i = 0; i < m_estPts.rows(); ++i) {
-    for (int j = 0; j < m_estPts.cols(); ++j) {
-      estPts_file0 << m_estPts(i, j) << " ";
-    }
-    estPts_file0 << endl;
-  }
-
-  for (int i = 0; i < m_vis.size(); ++i) {
-    vis_file << m_vis(i) << " ";
-  }
-  vis_file << endl;
-
-
 }
 
 void PhysicsTracker::expectationStep() {

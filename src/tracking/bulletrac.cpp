@@ -122,46 +122,8 @@ namespace bt
     vector<btVector3> estVel = m_sim->GetLinearVelocities();
     vector<float> masses = m_sim->GetMasses();
 
-    std::ofstream obsPts_file("obsPts_online.txt");
-    std::ofstream estPos_file("estPos_online.txt");
-    std::ofstream corr_file("corr_online.txt");
-    std::ofstream estVel_file("estVel_online.txt");
     
-    for (int i = 0; i < obsPts.rows(); ++i) {
-      for (int j = 0; j < obsPts.cols(); ++j) {
-        obsPts_file << obsPts(i, j) << " ";
-      }
-      obsPts_file << endl;
-    }
-
-    for (int i = 0; i < estPos.size(); ++i) {
-      estPos_file << estPos[i].x() << " " << estPos[i].y() << " " << estPos[i].z() << endl;
-    }
-
-    for (int i = 0; i < estVel.size(); ++i) {
-      estVel_file << estVel[i].x() << " " << estVel[i].y() << " " << estVel[i].z() << endl;
-    }
-
-    for (int i = 0; i < corr.rows(); ++i) {
-      for (int j = 0; j < corr.cols(); ++j) {
-        corr_file << corr(i, j) << " ";
-      }
-      corr_file << endl;
-    }
-
-    cout << "parameter" << endl;
-    cout << TrackingConfig::kp_rope << " " << TrackingConfig::kd_rope << endl;
-    for (int i = 0; i < masses.size(); ++i)
-      cout << masses[i] << " ";
-    cout << endl;
-
     vector<btVector3> impulses = calcImpulsesDamped(estPos, estVel, toBulletVectors(FE::activeFeatures2Feature(obsPts, FE::FT_XYZ)), corr, masses, TrackingConfig::kp_rope, TrackingConfig::kd_rope);
-    
-    cout << "impulses" << endl;
-    for (int i = 0; i < impulses.size(); ++i) {
-      cout << impulses[i].x() << " " << impulses[i].y() << " " << impulses[i].z() << endl;
-    }
-    
     m_sim->ApplyCentralImpulses(impulses);
   }
 
@@ -197,34 +159,10 @@ namespace bt
 
     for (int i = 0; i < num_iter; ++i)
     {
-      std::ofstream nodes_1_file("nodes_before_online.txt");
-      std::vector<btVector3> nodes_1 = scaleVecs(rope->getPoints(), 1/METERS);
-      for (int j = 0; j < nodes_1.size(); ++j) {
-        nodes_1_file << nodes_1[j].x() << " " << nodes_1[j].y() << " " << nodes_1[j].z() << endl;
-      }
-
       alg->updateFeatures();
       alg->expectationStep();
       alg->maximizationStep(applyEvidence);
-
-      std::ofstream nodes_3_file("nodes_step_online.txt");
-      std::vector<btVector3> nodes_3 = scaleVecs(rope->getPoints(), 1/METERS);
-      for (int j = 0; j < nodes_3.size(); ++j) {
-        nodes_3_file << nodes_3[j].x() << " " << nodes_3[j].y() << " " << nodes_3[j].z() << endl;
-      }
-
-
-      env->Step(.03, 2, .015);
-
-      std::ofstream nodes_2_file("nodes_after_online.txt");
-      std::vector<btVector3> nodes_2 = scaleVecs(rope->getPoints(), 1/METERS);
-      for (int j = 0; j < nodes_2.size(); ++j) {
-        nodes_2_file << nodes_2[j].x() << " " << nodes_2[j].y() << " " << nodes_2[j].z() << endl;
-      }
-
-      int tmp;
-      std::cin >> tmp;
-
+      env->Step(.03, 2, .015);      
     }
     
     std::vector<btVector3> nodes = scaleVecs(rope->getPoints(), 1/METERS);

@@ -93,15 +93,6 @@ void CloudFeatureExtractor::updateInputs(ColorCloudPtr cloud, cv::Mat image, Coo
   m_image = image;
   m_transformer = transformer;
   m_features.resize(m_cloud->size(), m_dim);
-
-  /*
-  std::ofstream cloud_file("cloud_C.txt");
-  cloud_file << "here " << m_cloud->points.size() << endl;
-  for (int i = 0; i < m_cloud->points.size(); ++i) {
-    cloud_file << m_cloud->points[i].x << " " << m_cloud->points[i].y << " " << m_cloud->points[i].z << endl;
-  }
-  */
-
 }
 
 void CloudFeatureExtractor::updateFeatures() {
