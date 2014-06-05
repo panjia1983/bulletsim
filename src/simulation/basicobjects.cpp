@@ -38,13 +38,15 @@ void BulletObject::setKinematic(bool isKinematic_) {
 
 void BulletObject::setFlagsAndActivation() {
 	if (isKinematic) {
-		rigidBody->setActivationState(DISABLE_DEACTIVATION);	
     rigidBody->setCollisionFlags(btCollisionObject::CF_KINEMATIC_OBJECT);
 	}
 	else {
-		rigidBody->setActivationState(ACTIVE_TAG);
+          //rigidBody->setActivationState(ACTIVE_TAG);
     rigidBody->setCollisionFlags(0);
 	}
+
+        rigidBody->setActivationState(DISABLE_DEACTIVATION);	
+
 }
 
 

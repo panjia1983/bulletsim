@@ -11,11 +11,11 @@ std::vector<std::string> TrackingConfig::cameraTopics = boost::assign::list_of("
 //std::vector<int> TrackingConfig::featureTypes = boost::assign::list_of(FeatureExtractor::FT_XYZ)(FeatureExtractor::FT_LAB);
 std::vector<int> TrackingConfig::featureTypes = boost::assign::list_of(FeatureExtractor::FT_XYZ);
 
-float TrackingConfig::downsample = 0.02;
+float TrackingConfig::downsample = 0.02; //0.02
 
-float TrackingConfig::pointOutlierDist = 0.02;
-float TrackingConfig::pointPriorCount = 10;
-float TrackingConfig::pointPriorDist = 0.02;
+float TrackingConfig::pointOutlierDist = 0.02; //0.02
+float TrackingConfig::pointPriorCount = 10; //10
+float TrackingConfig::pointPriorDist = 0.02; // 0.02
 float TrackingConfig::colorLPriorDist = 0.4;
 float TrackingConfig::colorABPriorDist = 0.08;
 float TrackingConfig::epsilon = 0.001;

@@ -461,8 +461,7 @@ void	btDiscreteDynamicsWorld::updateActivationState(btScalar timeStep)
 		{
 			body->updateDeactivation(timeStep);
 
-			// if (body->wantsSleeping())
-                        if (0)
+			if (body->wantsSleeping())
 			{
 				if (body->isStaticOrKinematicObject())
 				{

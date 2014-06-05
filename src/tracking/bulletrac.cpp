@@ -1,6 +1,7 @@
 #include "bulletrac.h"
 #include "algorithm_common.h"
 #include <fstream>
+#include <cfloat>
 
 namespace bt
 {
@@ -113,13 +114,31 @@ namespace bt
 
   std::vector<btVector3> TrackedRope::getPoints()
   {
-    return m_sim->GetNodes();
+    std::vector<btVector3> out = m_sim->GetNodes(); // already scaled back from the bullet (is done in GetNodes)
+    // then mapped back to bullet
+    for (int i = 0; i < out.size(); ++i) {
+      out[i] = out[i] * METERS;
+    }
+
+    return out;
+  }
+
+  std::vector<btVector3> TrackedRope::getNodes()
+  {
+    return m_sim->GetNodes(); // already scaled back from the bullet (is done in GetNodes)
   }
   
   void TrackedRope::applyEvidence(const Eigen::MatrixXf& corr, const Eigen::MatrixXf& obsPts)
   {
-    vector<btVector3> estPos = m_sim->GetNodes();
-    vector<btVector3> estVel = m_sim->GetLinearVelocities();
+    vector<btVector3> estPos = m_sim->GetNodes(); // this position has been scaled back, need rescale
+    vector<btVector3> estVel = m_sim->GetLinearVelocities(); // this velocity has been scaled back, need rescale
+    for (int i = 0; i < estPos.size(); ++i) {
+      estPos[i] = estPos[i] * METERS;
+    }
+    for (int i = 0; i < estVel.size(); ++i) {
+      estVel[i] = estVel[i] * METERS;
+    }
+    
     vector<float> masses = m_sim->GetMasses();
 
     
@@ -165,7 +184,7 @@ namespace bt
       env->Step(.03, 2, .015);      
     }
     
-    std::vector<btVector3> nodes = scaleVecs(rope->getPoints(), 1/METERS);
+    std::vector<btVector3> nodes = rope->getNodes();
     stdev = alg->m_stdev;
     
     return nodes;
@@ -215,7 +234,12 @@ namespace bt
     cv::Mat image(out_dim0, out_dim1, CV_32FC1);
     for (int i = 0; i < out_dim0; ++i) {
       for (int j = 0; j < out_dim1; ++j) {
-        image.at<float>(i, j) = *(pin + out_dim1 * i + j) / 1000.0;
+        int v = *(pin + out_dim1 * i + j);
+        if (v == 0) {
+          image.at<float>(i, j) = FLT_MAX;
+        }
+        else
+          image.at<float>(i, j) = *(pin + out_dim1 * i + j) / 1000.0;
       }
     }
 
@@ -223,7 +247,7 @@ namespace bt
   }
 
 
-  ColorCloud fromNdarray2ToColorCloud(py::object a)
+  ColorCloud fromNdarray2ToColorCloud(py::object a, double scale = 1)
   {
     a = ensureFormat<btScalar>(a);
     py::object shape = a.attr("shape");
@@ -241,9 +265,9 @@ namespace bt
 
     for (int i = 0; i < out_dim0; ++i) {
       btScalar* cur = pin + out_dim1 * i;
-      color_cloud.points[i].x = *cur;
-      color_cloud.points[i].y = *(cur + 1);
-      color_cloud.points[i].z = *(cur + 2);
+      color_cloud.points[i].x = *cur * scale;
+      color_cloud.points[i].y = *(cur + 1) * scale;
+      color_cloud.points[i].z = *(cur + 2) * scale;
       color_cloud.points[i].r = *(cur + 3);
       color_cloud.points[i].g = *(cur + 4);
       color_cloud.points[i].b = *(cur + 5);
@@ -284,10 +308,11 @@ namespace bt
   py::list py_tracking(bs::CapsuleRopePtr sim, bs::BulletEnvironmentPtr env, py::object cam, py::object cloud, py::object rgb_image, py::object depth_image, int num_iter, py::object stdev)
   {
     btTransform cam_ = toBtTransform(cam);
+
     cv::Mat rgb_image_ = fromNdarray3ToRGBImage(rgb_image);
     
     cv::Mat depth_image_ = fromNdarray2ToDepthImage(depth_image);
-    ColorCloudPtr cloud_(new ColorCloud(fromNdarray2ToColorCloud(cloud)));
+    ColorCloudPtr cloud_(new ColorCloud(fromNdarray2ToColorCloud(cloud, METERS)));
     Eigen::MatrixXf stdev_ = fromNdarrayToMatrix(stdev);
 
     std::vector<btVector3> nodes = tracking(sim, env, cam_, cloud_, rgb_image_, depth_image_, num_iter, stdev_);

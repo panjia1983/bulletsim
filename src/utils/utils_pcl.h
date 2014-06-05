@@ -19,7 +19,7 @@ typedef Eigen::Matrix<uint8_t,Eigen::Dynamic,Eigen::Dynamic> MatrixXu;
 
 ColorCloudPtr readPCD(const std::string& pcdfile);
 
-Eigen::MatrixXi xyz2uv(const Eigen::MatrixXf& xyz);
+Eigen::MatrixXi xyz2uv(const Eigen::MatrixXf& xyz, float default_f = f);
 inline cv::Point2f xyz2uv(const btVector3& point) {
   return cv::Point2f(f*point.x()/point.z() + cx, f*point.y()/point.z() + cy);
 }
@@ -65,3 +65,5 @@ ColorPoint toColorPoint(const btVector3& vec);
 Point toPoint(const Eigen::Vector3f& vec);
 
 ColorCloudPtr fromROSMsg1(const sensor_msgs::PointCloud2& msg);
+
+Eigen::Vector3f depth_to_xyz(const cv::Mat& depth, float default_f, int u, int v);

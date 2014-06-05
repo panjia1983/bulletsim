@@ -14,18 +14,29 @@ pcl::PointCloud<ColorPoint>::Ptr readPCD(const std::string& pcdfile) {
   return cloud;
 }
 
-Eigen::MatrixXi xyz2uv(const Eigen::MatrixXf& xyz) {
+Eigen::MatrixXi xyz2uv(const Eigen::MatrixXf& xyz, float default_f) {
  // http://www.pcl-users.org/Using-Kinect-with-PCL-How-to-project-a-3D-point-x-y-z-to-the-depth-rgb-image-and-how-to-unproject-a--td3164499.html
   VectorXf x = xyz.col(0);
   VectorXf y = xyz.col(1);
   VectorXf z = xyz.col(2);
 
-  VectorXf v = f*(x.array() / z.array()) + cx;
-  VectorXf u = f*(y.array() / z.array()) + cy;
+  VectorXf v = default_f*(x.array() / z.array()) + cx;
+  VectorXf u = default_f*(y.array() / z.array()) + cy;
   MatrixXi uv(u.rows(),2);
   uv.col(0) = u.cast<int>();
   uv.col(1) = v.cast<int>();
   return uv;
+}
+
+Eigen::Vector3f depth_to_xyz(const cv::Mat& depth, float default_f, int u, int v) {
+  float z = depth.at<float>(u, v);
+  float x = (v - cx) * z / default_f;
+  float y = (u - cy) * z / default_f;
+  Eigen::Vector3f xyz;
+  xyz(0) = x;
+  xyz(1) = y;
+  xyz(2) = z;
+  return xyz;
 }
 
 Eigen::MatrixXf toEigenMatrix(ColorCloudPtr cloud) {

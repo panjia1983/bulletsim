@@ -31,6 +31,7 @@ namespace bt {
     TrackedRope(bs::CapsuleRopePtr sim, const Vector3f& default_color);
     
     std::vector<btVector3> getPoints();
+    std::vector<btVector3> getNodes();
     void applyEvidence(const Eigen::MatrixXf& corr, const Eigen::MatrixXf& obsPts);
     void initColors();
 

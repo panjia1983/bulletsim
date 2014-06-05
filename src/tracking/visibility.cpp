@@ -21,24 +21,44 @@ VectorXf EverythingIsVisible::checkNodeVisibility(TrackedObject::Ptr obj) {
 VectorXf DepthImageVisibility::checkNodeVisibility(TrackedObject::Ptr obj) {
   MatrixXf ptsCam = toEigenMatrix(m_transformer->toCamFromWorldN(obj->getPoints()));
   VectorXf ptDists = ptsCam.rowwise().norm();
-  MatrixXi uvs = xyz2uv(ptsCam);
+  MatrixXi uvs = xyz2uv(ptsCam, 544.260779961);
+
   VectorXf vis(ptsCam.rows());
   for (int i = 0; i < vis.size(); ++i)
     vis(i) = 1.0;
 
   assert(m_depth.type() == CV_32FC1);
-  float occ_dist = DEPTH_OCCLUSION_DIST*METERS;
+  float occ_dist = DEPTH_OCCLUSION_DIST; // * METERS before, I think it is a bug, should all in the camera frame without scale.
 
   for (int iPt=0; iPt<ptsCam.rows(); ++iPt) {
     int u = uvs(iPt,0);
     int v = uvs(iPt,1);
     if (u<m_depth.rows && v<m_depth.cols && u>0 && v>0) {
-      bool is_vis = !isfinite(m_depth.at<float>(u,v)) || (m_depth.at<float>(u,v) + occ_dist > ptDists[iPt]);
+      // The following implementation of visibility is not correct
+      // bool is_vis = !isfinite(m_depth.at<float>(u,v)) || (m_depth.at<float>(u,v) + occ_dist > ptDists[iPt]); 
+
+      float depth_dist = FLT_MAX;
+      int nb_radius = 10;
+      for (int i = max(0, u - nb_radius); i <= min(u + nb_radius, m_depth.rows-1); ++i) {
+        for (int j = max(0, v - nb_radius); j <= min(v + nb_radius, m_depth.cols-1); ++j) {
+          if (isfinite(m_depth.at<float>(i, j))) {
+              Vector3f depth_xyz = depth_to_xyz(m_depth, 544.260779961, i, j);
+              float depth_dist_ = depth_xyz.norm();
+              depth_dist = min(depth_dist, depth_dist_);
+          }
+        }
+      }
+      bool is_vis = !isfinite(m_depth.at<float>(u,v)) || (depth_dist > ptDists[iPt] -occ_dist);
+      
+      //cout << u << " " << v << " " << depth_dist <<  " " << ptDists[iPt] << endl;
       if (is_vis)
         vis(iPt) = 1.0;
       else 
         vis(iPt) = 0.0;
     // see it if there's no non-rope pixel in front of it
+    }
+    else {
+      cout << "invalid " << u << " " << v << " " << m_depth.cols << " " << m_depth.rows << endl;
     }
   }
 

@@ -46,11 +46,13 @@ std::vector<btVector3> calcImpulsesDamped(const std::vector<btVector3>& estPos, 
 
   for (int k=0; k<K; k++) {
     btVector3 dv = -kd * estVel[k];
-    for (int n=0; n<N; n++)
+    for (int n=0; n<N; n++) {
       dv += (kp * corr(k,n)) * (obsPts[n] - estPos[k]);
+    }
     impulses[k] = masses[k]*dv;
     // XXX SHOULD THERE BE DT?
   }
+  cout << endl;
 
   /*
   float max_impulse=1;
