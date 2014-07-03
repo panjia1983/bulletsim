@@ -52,7 +52,6 @@ std::vector<btVector3> calcImpulsesDamped(const std::vector<btVector3>& estPos, 
     impulses[k] = masses[k]*dv;
     // XXX SHOULD THERE BE DT?
   }
-  cout << endl;
 
   /*
   float max_impulse=1;

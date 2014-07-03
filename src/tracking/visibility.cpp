@@ -33,7 +33,7 @@ VectorXf DepthImageVisibility::checkNodeVisibility(TrackedObject::Ptr obj) {
   for (int iPt=0; iPt<ptsCam.rows(); ++iPt) {
     int u = uvs(iPt,0);
     int v = uvs(iPt,1);
-    if (u<m_depth.rows && v<m_depth.cols && u>0 && v>0) {
+    if (u<m_depth.rows && v<m_depth.cols && u>=0 && v>=0) {
       // The following implementation of visibility is not correct
       // bool is_vis = !isfinite(m_depth.at<float>(u,v)) || (m_depth.at<float>(u,v) + occ_dist > ptDists[iPt]); 
 
@@ -58,7 +58,12 @@ VectorXf DepthImageVisibility::checkNodeVisibility(TrackedObject::Ptr obj) {
     // see it if there's no non-rope pixel in front of it
     }
     else {
+      /*
+      cout << obj->getPoints()[0].x() << " " << obj->getPoints()[0].y() << " " << obj->getPoints()[0].z() << endl;      
       cout << "invalid " << u << " " << v << " " << m_depth.cols << " " << m_depth.rows << endl;
+      int tmp;
+      std::cin >> tmp;
+      */
     }
   }
 

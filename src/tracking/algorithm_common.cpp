@@ -249,6 +249,46 @@ Eigen::MatrixXf calculateResponsibilities(const Eigen::MatrixXf& estPts, const E
   VectorXf outlierInvVariances = outlierInvStdev.array().square();
   squaredDistsInvVariance.row(K) = outlierInvVariances.dot(outlierDist.array().square().matrix()) * VectorXf::Ones(N).transpose();
 
+
+  
+  VectorXf sqrtDetInvVariances = invStdev.rowwise().prod();
+  MatrixXf pZgivenC_part_log = -0.5*squaredDistsInvVariance;
+  for (int k = 0; k < K; ++k) {
+    for (int n = 0; n < N; ++n) {
+      if (pVis(k) < 1e-20)
+        pZgivenC_part_log(k, n) += (log(sqrtDetInvVariances(k)) - 20);
+      else
+        pZgivenC_part_log(k, n) += (log(sqrtDetInvVariances(k)) + log(pVis(k)));
+    }
+  }
+
+
+  float outlierInvStdev_log = log(outlierInvStdev.prod());
+  for (int n = 0; n < N; ++n)
+    pZgivenC_part_log(K, n) += outlierInvStdev_log;
+
+
+  VectorXf pZgivenC_part_log_max = pZgivenC_part_log.colwise().maxCoeff();
+  for (int k = 0; k < K+1; ++k) {
+    for (int n = 0; n < N; ++n) {
+      pZgivenC_part_log(k, n) -= pZgivenC_part_log_max(n);
+    }
+  }
+
+
+  MatrixXf pZgivenC_log_sum_exp = pZgivenC_part_log.array().exp();
+  VectorXf pZgivenC_log_sum_exp_col = pZgivenC_log_sum_exp.colwise().sum().array().log();
+
+  MatrixXf pZgivenC(K+1,N);
+  for (int k = 0; k < K+1; ++k) {
+    for (int n = 0; n < N; ++n) {
+      pZgivenC(k, n) = pZgivenC_part_log(k, n) - pZgivenC_log_sum_exp_col(n);
+    }
+  }
+
+  pZgivenC = pZgivenC.array().exp();
+  
+  /*
   MatrixXf pZgivenC_exp_part = (-0.5*squaredDistsInvVariance).array().exp();
   VectorXf sqrtDetInvVariances = invStdev.rowwise().prod();
 
@@ -259,19 +299,58 @@ Eigen::MatrixXf calculateResponsibilities(const Eigen::MatrixXf& estPts, const E
 
   //normalize cols
   pZgivenC = pZgivenC * ((VectorXf) pZgivenC.colwise().sum().array().inverse()).asDiagonal();
+  */
+
+  /*
+   {
+    cout << "pZgivenC before iteration" << endl;
+    int tmp = 0;
+    for (int k=0; k < K+1; ++k) {
+      if (tmp > 10) break;
+      for (int n = 0; n < N; ++n) {
+        if (tmp > 10) break;
+        if (pZgivenC(k, n) != pZgivenC(k, n)) {
+          cout << pZgivenC(k, n) << " ";
+          tmp++;
+        }
+      }
+    }
+    cout << endl;
+  }
+  */
 
   //iteratively normalize rows and columns. columns are normalized to one and rows are normalized to the visibility term.
   for (int i=0; i<TrackingConfig::normalizeIter; i++) {
     //normalize rows
     //FIXME does the k+1 row need to be normalized?
+
     for (int k=0; k<K; k++) {
       if (pVis(k) < TrackingConfig::epsilon) {
         pZgivenC.row(k) = VectorXf::Zero(N);
       } else {
-        pZgivenC.row(k) /= pZgivenC.row(k).sum();
+        if (pZgivenC.row(k).sum() >= TrackingConfig::epsilon)
+          pZgivenC.row(k) /= pZgivenC.row(k).sum();
       }
     }
     //pZgivenC.row(K) /= pZgivenC.row(K).sum();
+
+    /*
+    {
+      cout << "pZgivenC iteration " << i << endl;
+      int tmp = 0;
+      for (int k=0; k < K+1; ++k) {
+        if (tmp > 10) break;
+        for (int n = 0; n < N; ++n) {
+          if (tmp > 10) break;
+          if (pZgivenC(k, n) != pZgivenC(k, n)) {
+            cout << pZgivenC(k, n) << " ";
+            tmp++;
+          }
+        }
+      }
+      cout << endl;
+    }
+    */
 
     //normalize cols
     pZgivenC = pZgivenC * ((VectorXf) pZgivenC.colwise().sum().array().inverse()).asDiagonal();

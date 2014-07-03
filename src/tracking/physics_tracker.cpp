@@ -49,6 +49,7 @@ void PhysicsTracker::updateFeatures() {
     if (m_obsFeatures->getFeatures(FE::FT_XYZ)(i,2) < 0.005*METERS)
       m_obsFeatures->getFeatures(FE::FT_XYZ)(i,2) = 0.005*METERS;
 
+
   m_estPts = m_objFeatures->getFeatures();
   m_obsPts = m_obsFeatures->getFeatures();  
 
@@ -59,6 +60,7 @@ void PhysicsTracker::expectationStep() {
   
   boost::posix_time::ptime e_time = boost::posix_time::microsec_clock::local_time();
   m_pZgivenC = calculateResponsibilities(m_estPts, m_obsPts, m_stdev, m_vis, m_objFeatures->m_obj->getOutlierDist(), m_objFeatures->m_obj->getOutlierStdev());
+
   LOG_DEBUG("E time " << (boost::posix_time::microsec_clock::local_time() - e_time).total_milliseconds());
 
 #if 0
